@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "779082946932",
+    "project_id": "carpoolkids-5a3e2",
+    "storage_bucket": "carpoolkids-5a3e2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:779082946932:android:40791a93d23ecca2297421",
+        "android_client_info": {
+          "package_name": "dev.segev.carpoolkids"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA2bfj3CDSLWlHGdIbuJEOInJiURbmM-6A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

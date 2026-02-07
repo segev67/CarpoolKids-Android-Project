@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">CarpoolKids</string>
+    <string name="sign_out">Sign out</string>
+    <string name="sign_in_error_email_in_use">That email is already registered. Choose \"Sign in\" (not \"Create account\").</string>
+    <string name="sign_in_error_generic">Sign-in failed. Use the Back button to try again, then choose Sign in or Create account.</string>
+    <!-- On-screen error (layout-based, no Toast) -->
+    <string name="sign_up_error_email_already_in_use">This email is already in use. Please sign in.</string>
+    <string name="sign_up_error_generic">Something went wrong. Please try again.</string>
+    <string name="btn_go_to_sign_in">חזרה להתחברות</string>
+</resources>

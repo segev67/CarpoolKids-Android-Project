@@ -12,7 +12,6 @@ import com.firebase.ui.auth.AuthUI
 import com.firebase.ui.auth.FirebaseAuthUIActivityResultContract
 import com.firebase.ui.auth.data.model.FirebaseAuthUIAuthenticationResult
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseAuthException
 import dev.segev.carpoolkids.data.GroupRepository
 import dev.segev.carpoolkids.data.UserRepository
 import dev.segev.carpoolkids.databinding.ActivityLoginBinding
@@ -164,12 +163,9 @@ class LoginActivity : AppCompatActivity() {
         binding.btnRetryProfile.visibility = View.GONE
     }
 
-    // True if the auth error indicates email already in use.
+    // True if the auth error indicates email already in use (idpResponse.error type is not FirebaseAuthException, so we check the message).
     private fun isEmailAlreadyInUseError(result: FirebaseAuthUIAuthenticationResult): Boolean {
         val error = result.idpResponse?.error ?: return false
-        (error as? FirebaseAuthException)?.errorCode?.let { code ->
-            if (code == "ERROR_EMAIL_ALREADY_IN_USE") return true
-        }
         val message = error.message.orEmpty()
         return message.contains("already in use", ignoreCase = true)
     }

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dashboard section label -->
+    <style name="TextAppearance.Dashboard.SectionLabel" parent="TextAppearance.MaterialComponents.Body2">
+        <item name="android:textSize">@dimen/text_section_label_size</item>
+        <item name="android:textColor">@color/dashboard_text_secondary</item>
+    </style>
+
+    <!-- Dashboard title (group name) -->
+    <style name="TextAppearance.Dashboard.Title" parent="TextAppearance.MaterialComponents.Headline6">
+        <item name="android:textSize">@dimen/text_title_size</item>
+        <item name="android:textColor">@color/dashboard_text_primary</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- Session card: rounded, elevated (parent Elevated removed in Material 1.11+) -->
+    <style name="Widget.CarpoolKids.CardView.Dashboard" parent="Widget.MaterialComponents.CardView">
+        <item name="cardCornerRadius">@dimen/card_corner_radius</item>
+        <item name="cardElevation">@dimen/card_elevation</item>
+        <item name="cardBackgroundColor">@color/dashboard_card_background</item>
+    </style>
+
+    <!-- Unified button style for all buttons in the project -->
+    <style name="Widget.CarpoolKids.Button" parent="Widget.MaterialComponents.Button">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textSize">16sp</item>
+        <item name="backgroundTint">@color/button_primary_blue</item>
+        <item name="android:minHeight">@dimen/button_min_height</item>
+    </style>
+
+    <!-- Home: section title (e.g. My Teams, Today's Training) -->
+    <style name="TextAppearance.Home.SectionTitle" parent="TextAppearance.MaterialComponents.Headline6">
+        <item name="android:textSize">@dimen/text_title_size</item>
+        <item name="android:textColor">@color/dashboard_text_primary</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <!-- Home: team card title -->
+    <style name="TextAppearance.Home.TeamName" parent="TextAppearance.MaterialComponents.Subtitle1">
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/dashboard_text_primary</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <!-- Home: team card subtitle / members -->
+    <style name="TextAppearance.Home.TeamSubtitle" parent="TextAppearance.MaterialComponents.Body2">
+        <item name="android:textSize">@dimen/text_section_label_size</item>
+        <item name="android:textColor">@color/dashboard_text_secondary</item>
+    </style>
+</resources>

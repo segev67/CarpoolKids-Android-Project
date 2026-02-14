@@ -1,85 +1,90 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Choose Role screen: matches docs/mocks wireframe style (dark theme, blue primary buttons) -->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".LoginActivity">
+    android:background="@color/background_dark"
+    android:padding="24dp"
+    tools:context=".ChooseRoleActivity">
 
-    <!-- Sign-up / auth error (existing) -->
     <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/tv_signup_error"
+        android:id="@+id/choose_role_title"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
-        android:layout_marginEnd="24dp"
         android:gravity="center"
-        android:textColor="?attr/colorError"
-        android:textSize="16sp"
-        android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@+id/btn_go_to_sign_in"
+        android:text="@string/choose_role_title"
+        android:textColor="@color/text_primary"
+        android:textSize="22sp"
+        android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:text="This email is already in use. Please sign in."
-        tools:visibility="visible" />
+        app:layout_constraintVertical_chainStyle="packed" />
 
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/btn_go_to_sign_in"
+        android:id="@+id/btn_role_parent"
         style="@style/Widget.CarpoolKids.Button"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="@string/btn_go_to_sign_in"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginTop="32dp"
+        android:text="@string/role_parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tv_signup_error"
-        tools:visibility="visible" />
+        app:layout_constraintTop_toBottomOf="@id/choose_role_title" />
 
-    <!-- Loading profile (Firestore check) -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_role_child"
+        style="@style/Widget.CarpoolKids.Button"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/role_child"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btn_role_parent" />
+
     <ProgressBar
-        android:id="@+id/login_progress"
+        android:id="@+id/choose_role_progress"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:indeterminate="true"
+        android:indeterminateTint="@color/text_primary"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btn_role_child"
         tools:visibility="visible" />
 
-    <!-- Profile load error (layout-based, no Snackbar only) -->
     <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/tv_profile_error"
+        android:id="@+id/tv_choose_role_error"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="24dp"
-        android:layout_marginEnd="24dp"
+        android:layout_marginTop="24dp"
         android:gravity="center"
-        android:textColor="?attr/colorError"
+        android:textColor="@color/error_light"
         android:textSize="16sp"
         android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@+id/btn_retry_profile"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:text="@string/profile_load_error"
+        app:layout_constraintTop_toBottomOf="@id/choose_role_progress"
+        tools:text="@string/choose_role_save_error"
         tools:visibility="visible" />
 
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/btn_retry_profile"
+        android:id="@+id/btn_retry_save"
         style="@style/Widget.CarpoolKids.Button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
         android:text="@string/retry"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tv_profile_error"
+        app:layout_constraintTop_toBottomOf="@id/tv_choose_role_error"
         tools:visibility="visible" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

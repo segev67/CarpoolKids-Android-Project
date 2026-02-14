@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:padding="@dimen/dashboard_screen_padding"
+    android:background="@color/dashboard_background">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <!-- Group name -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/dashboard_home_group_name"
+            style="@style/TextAppearance.Dashboard.Title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="Group name"
+            tools:visibility="visible" />
+
+        <!-- Today's Training section -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/dashboard_home_today_label"
+            style="@style/TextAppearance.Dashboard.SectionLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_md"
+            android:text="@string/home_todays_training"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/dashboard_home_group_name" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/dashboard_home_today_card"
+            style="@style/Widget.CarpoolKids.CardView.Dashboard"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/card_margin_between"
+            android:visibility="gone"
+            app:cardCornerRadius="@dimen/card_corner_radius"
+            app:cardElevation="@dimen/card_elevation"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/dashboard_home_today_label"
+            tools:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/card_padding">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/dashboard_home_today_team_name"
+                        style="@style/TextAppearance.Home.TeamName"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        tools:text="Group name" />
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/dashboard_home_today_badge"
+                        style="@style/Widget.MaterialComponents.Chip.Choice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="@dimen/text_badge_size"
+                        app:chipBackgroundColor="@color/dashboard_primary"
+                        app:chipMinHeight="24dp"
+                        tools:text="Type" />
+                </LinearLayout>
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/dashboard_home_today_date"
+                    style="@style/TextAppearance.Home.TeamSubtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_xs"
+                    android:textColor="@color/dashboard_primary"
+                    tools:text="Date" />
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/dashboard_home_today_time"
+                    style="@style/TextAppearance.Home.TeamName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_sm"
+                    tools:text="Time range" />
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/dashboard_home_today_location"
+                    style="@style/TextAppearance.Home.TeamSubtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_xs"
+                    tools:text="Location" />
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/dashboard_home_today_address"
+                    style="@style/TextAppearance.Home.TeamSubtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_xs"
+                    android:visibility="gone"
+                    tools:text="Address"
+                    tools:visibility="visible" />
+                <LinearLayout
+                    android:id="@+id/dashboard_home_today_driver_to_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_sm"
+                    android:orientation="horizontal"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/dashboard_home_today_to_label"
+                        style="@style/TextAppearance.Home.TeamSubtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/dashboard_home_today_driver_to"
+                        style="@style/TextAppearance.Home.TeamSubtitle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="end"
+                        android:textColor="@color/dashboard_primary"
+                        tools:text="Driver" />
+                </LinearLayout>
+                <LinearLayout
+                    android:id="@+id/dashboard_home_today_driver_back_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_xs"
+                    android:orientation="horizontal"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/dashboard_home_today_from_label"
+                        style="@style/TextAppearance.Home.TeamSubtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/dashboard_home_today_driver_back"
+                        style="@style/TextAppearance.Home.TeamSubtitle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="end"
+                        android:textColor="@color/dashboard_primary"
+                        tools:text="Driver" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Shown when there is no training today -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/dashboard_home_no_training_message"
+            style="@style/TextAppearance.Home.TeamSubtitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/card_margin_between"
+            android:gravity="center"
+            android:text="@string/home_today_day_off"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/dashboard_home_today_label"
+            tools:visibility="visible" />
+
+        <androidx.constraintlayout.widget.Barrier
+            android:id="@+id/dashboard_home_below_today_barrier"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:barrierDirection="bottom"
+            app:constraint_referenced_ids="dashboard_home_today_label,dashboard_home_today_card,dashboard_home_no_training_message" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/dashboard_home_btn_teams_list"
+            style="@style/Widget.CarpoolKids.Button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_lg"
+            android:text="@string/btn_teams_list"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/dashboard_home_below_today_barrier" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/dashboard_home_btn_create_join"
+            style="@style/Widget.CarpoolKids.Button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/button_margin_between"
+            android:text="@string/btn_create_join_group"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/dashboard_home_btn_teams_list" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/dashboard_home_btn_sign_out"
+            style="@style/Widget.CarpoolKids.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_section_lg"
+            android:layout_marginBottom="@dimen/spacing_lg"
+            android:text="@string/sign_out"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/dashboard_home_btn_create_join" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.core.widget.NestedScrollView>

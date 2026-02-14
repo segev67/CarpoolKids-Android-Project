@@ -12,6 +12,16 @@ class Constants {
     object Firestore {
         const val COLLECTION_USERS: String = "users"
         const val COLLECTION_GROUPS: String = "groups"
+        const val COLLECTION_LINK_CODES: String = "link_codes"
+    }
+
+    object LinkCode {
+        const val EXPIRY_MS: Long = 15 * 60 * 1000L
+    }
+
+    object UserRole {
+        const val PARENT: String = "PARENT"
+        const val CHILD: String = "CHILD"
     }
 
     object Storage {

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Screen padding -->
+    <dimen name="dashboard_screen_padding">24dp</dimen>
+
+    <!-- Vertical spacing -->
+    <dimen name="spacing_xs">4dp</dimen>
+    <dimen name="spacing_sm">8dp</dimen>
+    <dimen name="spacing_md">12dp</dimen>
+    <dimen name="spacing_lg">16dp</dimen>
+    <dimen name="spacing_xl">20dp</dimen>
+    <dimen name="spacing_section">24dp</dimen>
+    <dimen name="spacing_section_lg">28dp</dimen>
+
+    <!-- Card -->
+    <dimen name="card_corner_radius">12dp</dimen>
+    <dimen name="card_elevation">4dp</dimen>
+    <dimen name="card_padding">16dp</dimen>
+    <dimen name="card_margin_between">12dp</dimen>
+
+    <!-- Typography -->
+    <dimen name="text_title_size">20sp</dimen>
+    <dimen name="text_section_label_size">14sp</dimen>
+    <dimen name="text_card_day_size">14sp</dimen>
+    <dimen name="text_card_time_size">16sp</dimen>
+    <dimen name="text_badge_size">12sp</dimen>
+
+    <!-- Button -->
+    <dimen name="button_min_height">48dp</dimen>
+    <dimen name="button_margin_between">12dp</dimen>
+
+    <!-- Bottom nav -->
+    <dimen name="bottom_nav_height">56dp</dimen>
+    <!-- Home / My Teams -->
+    <dimen name="home_section_margin_bottom">24dp</dimen>
+    <dimen name="home_team_card_margin_bottom">12dp</dimen>
+    <dimen name="home_team_list_max_height">280dp</dimen>
+    <dimen name="home_training_card_inner_padding">16dp</dimen>
+    <dimen name="home_training_subsection_margin_top">12dp</dimen>
+    <dimen name="home_training_label_text_size">12sp</dimen>
+</resources>

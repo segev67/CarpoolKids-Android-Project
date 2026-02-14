@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/Widget.CarpoolKids.CardView.Dashboard"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/card_margin_between"
+    app:cardCornerRadius="@dimen/card_corner_radius"
+    app:cardElevation="@dimen/card_elevation">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/card_padding">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/session_card_day"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/dashboard_text_secondary"
+            android:textSize="@dimen/text_card_day_size"
+            tools:text="Day label" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/session_card_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_xs"
+            android:textColor="@color/dashboard_text_primary"
+            android:textSize="@dimen/text_card_time_size"
+            tools:text="Time range" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/session_card_badge"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_sm"
+            android:textSize="@dimen/text_badge_size"
+            app:chipBackgroundColor="@color/dashboard_primary"
+            app:chipMinHeight="24dp"
+            tools:text="Type" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/session_card_location"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_sm"
+            android:textColor="@color/dashboard_text_secondary"
+            android:textSize="@dimen/text_section_label_size"
+            tools:text="Location" />
+
+        <LinearLayout
+            android:id="@+id/session_card_driver_to_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_xs"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            tools:visibility="visible">
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/session_card_to_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/dashboard_text_secondary"
+                android:textSize="@dimen/text_section_label_size" />
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/session_card_driver_to"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="end"
+                android:textColor="@color/dashboard_primary"
+                android:textSize="@dimen/text_section_label_size"
+                tools:text="Driver name" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/session_card_driver_back_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_xs"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            tools:visibility="visible">
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/session_card_from_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/dashboard_text_secondary"
+                android:textSize="@dimen/text_section_label_size" />
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/session_card_driver_back"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="end"
+                android:textColor="@color/dashboard_primary"
+                android:textSize="@dimen/text_section_label_size"
+                tools:text="Driver name" />
+        </LinearLayout>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

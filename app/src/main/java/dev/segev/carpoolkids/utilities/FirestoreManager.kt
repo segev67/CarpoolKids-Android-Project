@@ -1,6 +1,7 @@
 package dev.segev.carpoolkids.utilities
 
 import android.content.Context
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import dev.segev.carpoolkids.model.Group
@@ -15,11 +16,13 @@ class FirestoreManager private constructor(context: Context) {
         user: UserProfile,
         callback: (Boolean, String?) -> Unit
     ) {
-        val data = hashMapOf(
+        val data = hashMapOf<String, Any>(
             "uid" to user.uid,
-            "displayName" to user.displayName,
-            "email" to user.email,
-            "photoUrl" to (user.photoUrl ?: "")
+            "displayName" to (user.displayName ?: ""),
+            "email" to (user.email ?: ""),
+            "role" to user.role,
+            "photoUrl" to (user.photoUrl ?: ""),
+            "createdAt" to FieldValue.serverTimestamp()
         )
         db.collection(Constants.Firestore.COLLECTION_USERS)
             .document(user.uid)
@@ -44,11 +47,19 @@ class FirestoreManager private constructor(context: Context) {
             .addOnSuccessListener { doc ->
                 if (doc != null && doc.exists()) {
                     val photoUrl = doc.getString("photoUrl")?.takeIf { it.isNotEmpty() }
+                    val role = doc.getString("role") ?: ""
+                    val createdAt = doc.getTimestamp("createdAt")?.toDate()?.time
+                    val parentUids = (doc.get("parentUids") as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
+                    val childUids = (doc.get("childUids") as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
                     val profile = UserProfile(
                         uid = doc.getString("uid") ?: uid,
-                        displayName = doc.getString("displayName") ?: "",
-                        email = doc.getString("email") ?: "",
-                        photoUrl = photoUrl
+                        email = doc.getString("email"),
+                        displayName = doc.getString("displayName"),
+                        role = role,
+                        photoUrl = photoUrl,
+                        createdAt = createdAt,
+                        parentUids = parentUids,
+                        childUids = childUids
                     )
                     callback(profile, null)
                 } else {
@@ -94,14 +105,7 @@ class FirestoreManager private constructor(context: Context) {
             .whereArrayContains("memberIds", uid)
             .get()
             .addOnSuccessListener { snapshot ->
-                val list = snapshot.documents.mapNotNull { doc ->
-                    val id = doc.getString("id") ?: doc.id
-                    val name = doc.getString("name") ?: return@mapNotNull null
-                    val inviteCode = doc.getString("inviteCode") ?: return@mapNotNull null
-                    val memberIds = (doc.get("memberIds") as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
-                    val createdBy = doc.getString("createdBy") ?: return@mapNotNull null
-                    Group(id, name, inviteCode, memberIds, createdBy)
-                }
+                val list = snapshot.documents.mapNotNull { doc -> documentToGroup(doc) }
                 callback(list, null)
             }
             .addOnFailureListener { e ->
@@ -109,6 +113,126 @@ class FirestoreManager private constructor(context: Context) {
                 SignalManager.getInstance().toast(message, SignalManager.ToastLength.LONG)
                 callback(emptyList(), message)
             }
+    }
+
+    fun getGroupById(groupId: String, callback: (Group?, String?) -> Unit) {
+        db.collection(Constants.Firestore.COLLECTION_GROUPS)
+            .document(groupId)
+            .get()
+            .addOnSuccessListener { doc ->
+                if (doc != null && doc.exists()) {
+                    documentToGroup(doc)?.let { callback(it, null) }
+                        ?: callback(null, "Invalid group data")
+                } else {
+                    callback(null, "Group not found")
+                }
+            }
+            .addOnFailureListener { e ->
+                callback(null, e.message ?: "Failed to load group")
+            }
+    }
+
+    /** Lookup by invite code for join flow; first match only. */
+    fun getGroupByInviteCode(inviteCode: String, callback: (Group?, String?) -> Unit) {
+        if (inviteCode.isBlank()) {
+            callback(null, "Enter an invite code")
+            return
+        }
+        db.collection(Constants.Firestore.COLLECTION_GROUPS)
+            .whereEqualTo("inviteCode", inviteCode.trim().uppercase())
+            .limit(1)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val doc = snapshot.documents.firstOrNull()
+                if (doc != null) {
+                    documentToGroup(doc)?.let { callback(it, null) }
+                        ?: callback(null, "Invalid group data")
+                } else {
+                    callback(null, "No group with this code")
+                }
+            }
+            .addOnFailureListener { e ->
+                callback(null, e.message ?: "Failed to find group")
+            }
+    }
+
+    /** Adds uid to memberIds; safe to call if already a member. */
+    fun addMemberToGroup(groupId: String, uid: String, callback: (Boolean, String?) -> Unit) {
+        db.collection(Constants.Firestore.COLLECTION_GROUPS)
+            .document(groupId)
+            .update("memberIds", FieldValue.arrayUnion(uid))
+            .addOnSuccessListener { callback(true, null) }
+            .addOnFailureListener { e -> callback(false, e.message ?: "Failed to join group") }
+    }
+
+    private fun documentToGroup(doc: com.google.firebase.firestore.DocumentSnapshot): Group? {
+        val id = doc.getString("id") ?: doc.id
+        val name = doc.getString("name") ?: return null
+        val inviteCode = doc.getString("inviteCode") ?: return null
+        val memberIds = (doc.get("memberIds") as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
+        val createdBy = doc.getString("createdBy") ?: return null
+        return Group(id, name, inviteCode, memberIds, createdBy)
+    }
+
+    fun createLinkCode(creatorUid: String, creatorRole: String, groupId: String, callback: (String?, String?) -> Unit) {
+        val code = java.util.UUID.randomUUID().toString().replace("-", "").take(6).uppercase()
+        val data = hashMapOf<String, Any>(
+            "creatorUid" to creatorUid,
+            "creatorRole" to creatorRole,
+            "groupId" to groupId,
+            "createdAt" to FieldValue.serverTimestamp()
+        )
+        db.collection(Constants.Firestore.COLLECTION_LINK_CODES)
+            .document(code)
+            .set(data)
+            .addOnSuccessListener { callback(code, null) }
+            .addOnFailureListener { e -> callback(null, e.message ?: "Failed to create code") }
+    }
+
+    fun getLinkCode(code: String, callback: (creatorUid: String?, creatorRole: String?, groupId: String?, createdAt: Long?, String?) -> Unit) {
+        val normalized = code.trim().uppercase()
+        if (normalized.isBlank()) {
+            callback(null, null, null, null, "Enter a link code")
+            return
+        }
+        db.collection(Constants.Firestore.COLLECTION_LINK_CODES)
+            .document(normalized)
+            .get()
+            .addOnSuccessListener { doc ->
+                if (doc == null || !doc.exists()) {
+                    callback(null, null, null, null, "Invalid or expired code")
+                    return@addOnSuccessListener
+                }
+                val creatorUid = doc.getString("creatorUid")
+                val creatorRole = doc.getString("creatorRole")
+                val groupId = doc.getString("groupId")
+                val createdAt = doc.getTimestamp("createdAt")?.toDate()?.time
+                if (creatorUid.isNullOrBlank() || creatorRole.isNullOrBlank() || groupId.isNullOrBlank() || createdAt == null) {
+                    callback(null, null, null, null, "Invalid code data")
+                    return@addOnSuccessListener
+                }
+                callback(creatorUid, creatorRole, groupId, createdAt, null)
+            }
+            .addOnFailureListener { e -> callback(null, null, null, null, e.message ?: "Failed to read code") }
+    }
+
+    fun deleteLinkCode(code: String, callback: (Boolean, String?) -> Unit) {
+        db.collection(Constants.Firestore.COLLECTION_LINK_CODES)
+            .document(code.trim().uppercase())
+            .delete()
+            .addOnSuccessListener { callback(true, null) }
+            .addOnFailureListener { e -> callback(false, e.message) }
+    }
+
+    fun addParentChildLink(parentUid: String, childUid: String, callback: (Boolean, String?) -> Unit) {
+        val users = db.collection(Constants.Firestore.COLLECTION_USERS)
+        users.document(parentUid).update("childUids", FieldValue.arrayUnion(childUid))
+            .addOnSuccessListener {
+                users.document(childUid).update("parentUids", FieldValue.arrayUnion(parentUid))
+                    .addOnSuccessListener { callback(true, null) }
+                    .addOnFailureListener { e -> callback(false, e.message ?: "Failed to update child") }
+            }
+            .addOnFailureListener { e -> callback(false, e.message ?: "Failed to update parent") }
     }
 
     fun listenToGroups(
@@ -126,14 +250,7 @@ class FirestoreManager private constructor(context: Context) {
                     callback(emptyList())
                     return@addSnapshotListener
                 }
-                val list = snapshot?.documents?.mapNotNull { doc ->
-                    val id = doc.getString("id") ?: doc.id
-                    val name = doc.getString("name") ?: return@mapNotNull null
-                    val inviteCode = doc.getString("inviteCode") ?: return@mapNotNull null
-                    val memberIds = (doc.get("memberIds") as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
-                    val createdBy = doc.getString("createdBy") ?: return@mapNotNull null
-                    Group(id, name, inviteCode, memberIds, createdBy)
-                } ?: emptyList()
+                val list = snapshot?.documents?.mapNotNull { documentToGroup(it) } ?: emptyList()
                 callback(list)
             }
     }

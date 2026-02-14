@@ -7,4 +7,21 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <!-- Mock wireframe style: dark theme + blue primary -->
+    <color name="background_dark">#121212</color>
+    <color name="surface_dark">#1E1E1E</color>
+    <color name="button_primary_blue">#356794</color>
+    <color name="text_primary">#FFFFFFFF</color>
+    <color name="text_secondary">#B3B3B3</color>
+    <color name="text_box_background">#b5cfe6</color>
+    <color name="error_light">#EF5350</color>
+    <!-- Dashboard dark palette (reusable) -->
+    <color name="dashboard_background">#121212</color>
+    <color name="dashboard_card_background">#1E1E1E</color>
+    <color name="dashboard_primary">#2196F3</color>
+    <color name="dashboard_text_primary">#FFFFFFFF</color>
+    <color name="dashboard_text_secondary">#B3B3B3</color>
+    <color name="dashboard_badge_practice">#4CAF50</color>
+    <color name="dashboard_badge_scrimmage">#FF9800</color>
+    <color name="home_training_subsect_bg">#2A2D33</color>
 </resources>

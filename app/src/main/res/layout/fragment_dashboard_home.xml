@@ -67,8 +67,6 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:ellipsize="end"
-                        android:maxLines="1"
                         tools:text="Group name" />
                     <com.google.android.material.chip.Chip
                         android:id="@+id/dashboard_home_today_badge"

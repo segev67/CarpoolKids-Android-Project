@@ -77,4 +77,17 @@
     <string name="dashboard_schedule_title">Weekly Practices</string>
     <string name="dashboard_group_title">Group details</string>
     <string name="dashboard_drivers_requests_title">Drivers requests</string>
+    <!-- Group tab hub -->
+    <string name="group_hub_title">Group</string>
+    <string name="group_hub_details">Group details</string>
+    <string name="group_hub_invite">Invite to group</string>
+    <string name="group_hub_join_requests">Join requests (%d)</string>
+    <string name="group_screen_join_requests">Join requests</string>
+    <string name="group_hub_blocked_users">Blocked users</string>
+    <!-- Invite code screen -->
+    <string name="invite_code_title">Invite to group</string>
+    <string name="invite_code_label">Invite code</string>
+    <string name="btn_copy_code">Copy code</string>
+    <string name="invite_code_copied">Code copied to clipboard</string>
+    <string name="invite_code_no_group">You\'re not in a group yet. Create or join a group to start inviting friends.</string>
 </resources>

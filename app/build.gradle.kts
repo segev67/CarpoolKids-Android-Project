@@ -47,6 +47,7 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("androidx.fragment:fragment-ktx:1.6.2")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
+    implementation("androidx.cardview:cardview:1.0.0")
 
     // Glide
     implementation("com.github.bumptech.glide:glide:4.16.0")

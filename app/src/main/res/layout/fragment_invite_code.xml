@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/dashboard_background"
+    tools:context=".InviteCodeFragment">
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/invite_code_btn_copy"
+        style="@style/Widget.CarpoolKids.Button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="@dimen/spacing_section"
+        android:text="@string/btn_copy_code" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/invite_code_btn_copy"
+        android:layout_centerHorizontal="true"
+        android:layout_marginStart="@dimen/dashboard_screen_padding"
+        android:layout_marginEnd="@dimen/dashboard_screen_padding"
+        android:orientation="vertical"
+        android:gravity="center_horizontal">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/invite_code_screen_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/invite_code_title"
+            android:textSize="@dimen/text_title_size"
+            android:textColor="@color/dashboard_text_primary"
+            android:textStyle="bold" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/invite_code_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_section"
+            android:text="@string/invite_code_label"
+            android:textSize="@dimen/text_section_label_size"
+            android:textColor="@color/dashboard_text_secondary" />
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/invite_code_value_card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_md"
+            app:cardCornerRadius="@dimen/card_corner_radius"
+            app:cardElevation="@dimen/card_elevation"
+            app:cardBackgroundColor="@color/dashboard_card_background">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/invite_code_value"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="@dimen/card_padding"
+                android:gravity="center"
+                android:fontFamily="monospace"
+                android:textSize="@dimen/text_card_time_size"
+                android:textColor="@color/dashboard_text_primary" />
+        </androidx.cardview.widget.CardView>
+    </LinearLayout>
+</RelativeLayout>

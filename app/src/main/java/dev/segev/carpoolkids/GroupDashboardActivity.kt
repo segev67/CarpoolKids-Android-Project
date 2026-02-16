@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.commit
 import dev.segev.carpoolkids.databinding.ActivityGroupDashboardBinding
 
@@ -79,8 +80,13 @@ class GroupDashboardActivity : AppCompatActivity(), DashboardHomeListener {
                     true
                 }
                 R.id.nav_group -> {
+                    supportFragmentManager.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
                     supportFragmentManager.commit {
-                        replace(R.id.dashboard_fragment_container, GroupFragment(), "group")
+                        replace(
+                            R.id.dashboard_fragment_container,
+                            GroupFragment.newInstance(currentGroupId, role.orEmpty()),
+                            "group"
+                        )
                     }
                     true
                 }

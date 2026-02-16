@@ -57,11 +57,7 @@ class GroupDashboardActivity : AppCompatActivity(), DashboardHomeListener {
 
         currentGroupId = intent.getStringExtra(EXTRA_GROUP_ID).orEmpty()
         role = intent.getStringExtra(EXTRA_ROLE)
-        if (currentGroupId.isEmpty()) {
-            finish()
-            return
-        }
-
+        // Allow empty group: user can see dashboard with empty teams/schedule/requests and use Create/Join from Home.
         initViews()
         if (savedInstanceState == null) {
             showHomeFragment()

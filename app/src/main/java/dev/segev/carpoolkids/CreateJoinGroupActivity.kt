@@ -37,10 +37,11 @@ class CreateJoinGroupActivity : AppCompatActivity() {
         initViews(uid)
     }
 
-    // Wire create, join, and retry buttons.
+    // Wire create, join, continue-without-group, and retry buttons.
     private fun initViews(uid: String) {
         binding.btnCreateGroup.setOnClickListener { createGroup(uid) }
         binding.btnJoinGroup.setOnClickListener { joinGroup(uid) }
+        binding.btnContinueWithoutGroup.setOnClickListener { openDashboardWithoutGroup() }
         binding.btnRetryCreateJoin.setOnClickListener {
             hideError()
             setRoleButtonsEnabled(true)
@@ -83,6 +84,15 @@ class CreateJoinGroupActivity : AppCompatActivity() {
     private fun openDashboardAndFinish(group: Group) {
         val role = intent.getStringExtra(GroupDashboardActivity.EXTRA_ROLE)
         setResult(RESULT_OK, Intent().putExtra(GroupDashboardActivity.EXTRA_GROUP_ID, group.id).putExtra(GroupDashboardActivity.EXTRA_ROLE, role))
+        finish()
+    }
+
+    // Open Group Dashboard with no group; teams list, schedule, requests empty; Home has Create/Join.
+    private fun openDashboardWithoutGroup() {
+        val intent = Intent(this, GroupDashboardActivity::class.java)
+        intent.putExtra(GroupDashboardActivity.EXTRA_GROUP_ID, "")
+        intent.putExtra(GroupDashboardActivity.EXTRA_ROLE, intent.getStringExtra(GroupDashboardActivity.EXTRA_ROLE))
+        startActivity(intent)
         finish()
     }
 

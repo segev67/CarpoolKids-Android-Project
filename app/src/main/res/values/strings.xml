@@ -25,6 +25,7 @@
     <string name="group_name_required">Enter a group name.</string>
     <string name="invite_code_required">Enter the invite code.</string>
     <string name="create_join_error">Something went wrong. Try again.</string>
+    <string name="btn_continue_without_group">Continue without a group</string>
     <!-- Group dashboard -->
     <string name="upcoming_sessions">Upcoming Sessions</string>
     <string name="no_sessions_yet">No sessions yet. Add a practice or view schedule.</string>
@@ -59,6 +60,7 @@
     <string name="home_my_teams_subtitle">Your connected groups.</string>
     <string name="home_members_count">%d members</string>
     <string name="home_no_teams">You’re not in any team yet.</string>
+    <string name="btn_back_to_home">Back to Home</string>
     <string name="home_join_new_team">Join New Team</string>
     <!-- Today\'s Training -->
     <string name="home_todays_training">Today\'s Practices</string>

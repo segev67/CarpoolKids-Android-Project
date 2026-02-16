@@ -34,6 +34,7 @@ class TeamsListActivity : AppCompatActivity() {
             insets
         }
         setupRecycler()
+        binding.teamsListBtnBackToHome.setOnClickListener { finish() }
         loadTeams()
     }
 
@@ -66,9 +67,9 @@ class TeamsListActivity : AppCompatActivity() {
             }
             if (models.isEmpty()) {
                 binding.teamsListRecycler.visibility = View.GONE
-                binding.teamsListEmpty.visibility = View.VISIBLE
+                binding.teamsListEmptyContainer.visibility = View.VISIBLE
             } else {
-                binding.teamsListEmpty.visibility = View.GONE
+                binding.teamsListEmptyContainer.visibility = View.GONE
                 binding.teamsListRecycler.visibility = View.VISIBLE
                 teamAdapter.submitList(models)
             }

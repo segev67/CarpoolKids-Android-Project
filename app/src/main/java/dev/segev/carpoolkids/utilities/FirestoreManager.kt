@@ -132,7 +132,7 @@ class FirestoreManager private constructor(context: Context) {
             }
     }
 
-    /** Lookup by invite code for join flow; first match only. */
+    /** Lookup by invite code for join flow, first match only. */
     fun getGroupByInviteCode(inviteCode: String, callback: (Group?, String?) -> Unit) {
         if (inviteCode.isBlank()) {
             callback(null, "Enter an invite code")
@@ -156,13 +156,26 @@ class FirestoreManager private constructor(context: Context) {
             }
     }
 
-    /** Adds uid to memberIds; safe to call if already a member. */
+    /** Adds uid to memberIds, safe to call if already a member. */
     fun addMemberToGroup(groupId: String, uid: String, callback: (Boolean, String?) -> Unit) {
         db.collection(Constants.Firestore.COLLECTION_GROUPS)
             .document(groupId)
             .update("memberIds", FieldValue.arrayUnion(uid))
             .addOnSuccessListener { callback(true, null) }
             .addOnFailureListener { e -> callback(false, e.message ?: "Failed to join group") }
+    }
+
+    /** Updates the group invite code (PARENT-only use). */
+    fun updateGroupInviteCode(groupId: String, newInviteCode: String, callback: (Boolean, String?) -> Unit) {
+        if (groupId.isBlank() || newInviteCode.isBlank()) {
+            callback(false, "Invalid group or code")
+            return
+        }
+        db.collection(Constants.Firestore.COLLECTION_GROUPS)
+            .document(groupId)
+            .update("inviteCode", newInviteCode.trim().uppercase())
+            .addOnSuccessListener { callback(true, null) }
+            .addOnFailureListener { e -> callback(false, e.message ?: "Failed to update invite code") }
     }
 
     private fun documentToGroup(doc: com.google.firebase.firestore.DocumentSnapshot): Group? {

@@ -2,7 +2,6 @@ package dev.segev.carpoolkids
 
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -11,11 +10,12 @@ import androidx.core.content.getSystemService
 import androidx.fragment.app.Fragment
 import dev.segev.carpoolkids.data.GroupRepository
 import dev.segev.carpoolkids.databinding.FragmentInviteCodeBinding
+import dev.segev.carpoolkids.utilities.Constants
 import dev.segev.carpoolkids.utilities.SignalManager
 
 /**
  * Shows the group invite code and Copy button. PARENT and CHILD can view and copy.
- * Regenerate (PARENT only) will be added in a later phase.
+ * Regenerate invite code is PARENT only.
  */
 class InviteCodeFragment : Fragment() {
 
@@ -34,7 +34,10 @@ class InviteCodeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val groupId = arguments?.getString(ARG_GROUP_ID).orEmpty()
+        val role = arguments?.getString(ARG_ROLE).orEmpty()
         binding.inviteCodeBtnCopy.setOnClickListener { copyCodeToClipboard() }
+        binding.inviteCodeBtnRegenerate.setOnClickListener { regenerateCode(groupId) }
+        binding.inviteCodeBtnRegenerate.visibility = if (role == Constants.UserRole.PARENT) View.VISIBLE else View.GONE
         if (groupId.isEmpty()) {
             showNoGroupMessage()
             return
@@ -45,11 +48,31 @@ class InviteCodeFragment : Fragment() {
     private fun showNoGroupMessage() {
         binding.inviteCodeValue.text = getString(R.string.invite_code_no_group)
         binding.inviteCodeBtnCopy.visibility = View.GONE
+        binding.inviteCodeBtnRegenerate.visibility = View.GONE
     }
 
     private fun showInviteCode(code: String) {
         binding.inviteCodeValue.text = code
         binding.inviteCodeBtnCopy.visibility = View.VISIBLE
+        val role = arguments?.getString(ARG_ROLE).orEmpty()
+        binding.inviteCodeBtnRegenerate.visibility = if (role == Constants.UserRole.PARENT) View.VISIBLE else View.GONE
+    }
+
+    private fun regenerateCode(groupId: String) {
+        GroupRepository.regenerateInviteCode(groupId) { newCode, error ->
+            if (newCode != null) {
+                showInviteCode(newCode)
+                SignalManager.getInstance().toast(
+                    getString(R.string.invite_code_regenerated),
+                    SignalManager.ToastLength.SHORT
+                )
+            } else {
+                SignalManager.getInstance().toast(
+                    error ?: getString(R.string.create_join_error),
+                    SignalManager.ToastLength.SHORT
+                )
+            }
+        }
     }
 
     private fun loadGroupAndShowCode(groupId: String) {

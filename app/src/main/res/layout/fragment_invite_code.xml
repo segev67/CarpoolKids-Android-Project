@@ -8,20 +8,36 @@
     android:background="@color/dashboard_background"
     tools:context=".InviteCodeFragment">
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/invite_code_btn_copy"
-        style="@style/Widget.CarpoolKids.Button"
+    <LinearLayout
+        android:id="@+id/invite_code_buttons"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="@dimen/spacing_section"
-        android:text="@string/btn_copy_code" />
+        android:orientation="vertical"
+        android:gravity="center">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/invite_code_btn_regenerate"
+            style="@style/Widget.CarpoolKids.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/spacing_md"
+            android:text="@string/btn_regenerate_code" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/invite_code_btn_copy"
+            style="@style/Widget.CarpoolKids.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_copy_code" />
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_above="@id/invite_code_btn_copy"
+        android:layout_above="@id/invite_code_buttons"
         android:layout_centerHorizontal="true"
         android:layout_marginStart="@dimen/dashboard_screen_padding"
         android:layout_marginEnd="@dimen/dashboard_screen_padding"

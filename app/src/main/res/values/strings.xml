@@ -88,6 +88,8 @@
     <string name="invite_code_title">Invite to group</string>
     <string name="invite_code_label">Invite code</string>
     <string name="btn_copy_code">Copy code</string>
+    <string name="btn_regenerate_code">Regenerate code</string>
     <string name="invite_code_copied">Code copied to clipboard</string>
+    <string name="invite_code_regenerated">Invite code updated</string>
     <string name="invite_code_no_group">You\'re not in a group yet. Create or join a group to start inviting friends.</string>
 </resources>

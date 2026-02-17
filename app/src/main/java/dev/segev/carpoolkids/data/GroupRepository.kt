@@ -49,6 +49,18 @@ object GroupRepository {
         }
     }
 
+    /** Regenerates invite code for the group, returns new code on success (PARENT-only). */
+    fun regenerateInviteCode(groupId: String, callback: (String?, String?) -> Unit) {
+        if (groupId.isBlank()) {
+            callback(null, "No group")
+            return
+        }
+        val newCode = generateInviteCode()
+        FirestoreManager.getInstance().updateGroupInviteCode(groupId, newCode) { success, error ->
+            if (success) callback(newCode, null) else callback(null, error)
+        }
+    }
+
     /** 6-char uppercase alphanumeric for easy sharing. */
     private fun generateInviteCode(): String =
         UUID.randomUUID().toString().replace("-", "").take(6).uppercase()

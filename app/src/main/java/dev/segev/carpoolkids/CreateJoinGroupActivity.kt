@@ -11,6 +11,8 @@ import com.google.firebase.auth.FirebaseAuth
 import dev.segev.carpoolkids.data.GroupRepository
 import dev.segev.carpoolkids.databinding.ActivityCreateJoinGroupBinding
 import dev.segev.carpoolkids.model.Group
+import dev.segev.carpoolkids.utilities.Constants
+import dev.segev.carpoolkids.utilities.SignalManager
 
 class CreateJoinGroupActivity : AppCompatActivity() {
 
@@ -35,6 +37,22 @@ class CreateJoinGroupActivity : AppCompatActivity() {
         }
 
         initViews(uid)
+        configureRoleUi(intent.getStringExtra(GroupDashboardActivity.EXTRA_ROLE))
+    }
+
+    // Role-based create section: PARENT sees input + button; CHILD sees only the informational message.
+    private fun configureRoleUi(role: String?) {
+        if (role == Constants.UserRole.CHILD) {
+            binding.createSectionLabel.visibility = View.GONE
+            binding.inputGroupName.visibility = View.GONE
+            binding.btnCreateGroup.visibility = View.GONE
+            binding.childCreateGroupMessage.visibility = View.VISIBLE
+        } else {
+            binding.createSectionLabel.visibility = View.VISIBLE
+            binding.inputGroupName.visibility = View.VISIBLE
+            binding.btnCreateGroup.visibility = View.VISIBLE
+            binding.childCreateGroupMessage.visibility = View.GONE
+        }
     }
 
     // Wire create, join, continue-without-group, and retry buttons.
@@ -64,7 +82,7 @@ class CreateJoinGroupActivity : AppCompatActivity() {
         }
     }
 
-    // Join existing group by invite code and return group id to caller.
+    // Submit join request (PENDING); no immediate join. User stays NO GROUP until parent approves.
     private fun joinGroup(uid: String) {
         val code = binding.etInviteCode.text?.toString()?.trim()
         if (code.isNullOrBlank()) {
@@ -74,10 +92,21 @@ class CreateJoinGroupActivity : AppCompatActivity() {
         setRoleButtonsEnabled(false)
         hideError()
         showProgress(true)
-        GroupRepository.joinGroup(code, uid) { group, error ->
+        GroupRepository.createJoinRequest(code, uid) { alreadyMemberGroup, error ->
             showProgress(false)
             setRoleButtonsEnabled(true)
-            if (group != null) openDashboardAndFinish(group) else showError(error ?: getString(R.string.create_join_error))
+            when {
+                error != null -> showError(error)
+                alreadyMemberGroup != null -> openDashboardAndFinish(alreadyMemberGroup)
+                else -> {
+                    SignalManager.getInstance().toast(
+                        getString(R.string.join_request_sent),
+                        SignalManager.ToastLength.SHORT
+                    )
+                    setResult(RESULT_OK)
+                    finish()
+                }
+            }
         }
     }
 
@@ -89,9 +118,11 @@ class CreateJoinGroupActivity : AppCompatActivity() {
 
     // Open Group Dashboard with no group; teams list, schedule, requests empty; Home has Create/Join.
     private fun openDashboardWithoutGroup() {
-        val intent = Intent(this, GroupDashboardActivity::class.java)
-        intent.putExtra(GroupDashboardActivity.EXTRA_GROUP_ID, "")
-        intent.putExtra(GroupDashboardActivity.EXTRA_ROLE, intent.getStringExtra(GroupDashboardActivity.EXTRA_ROLE))
+        val intent = Intent(this, GroupDashboardActivity::class.java).apply {
+            putExtra(GroupDashboardActivity.EXTRA_GROUP_ID, "")
+            putExtra(GroupDashboardActivity.EXTRA_ROLE, intent.getStringExtra(GroupDashboardActivity.EXTRA_ROLE))
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
         startActivity(intent)
         finish()
     }

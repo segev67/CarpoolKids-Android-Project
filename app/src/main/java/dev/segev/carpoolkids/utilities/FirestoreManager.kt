@@ -1,10 +1,12 @@
 package dev.segev.carpoolkids.utilities
 
 import android.content.Context
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import dev.segev.carpoolkids.model.Group
+import dev.segev.carpoolkids.model.JoinRequest
 import dev.segev.carpoolkids.model.UserProfile
 import java.lang.ref.WeakReference
 
@@ -82,7 +84,8 @@ class FirestoreManager private constructor(context: Context) {
             "name" to group.name,
             "inviteCode" to group.inviteCode,
             "memberIds" to group.memberIds,
-            "createdBy" to group.createdBy
+            "createdBy" to group.createdBy,
+            "blockedUids" to (group.blockedUids.ifEmpty { emptyList<String>() })
         )
         db.collection(Constants.Firestore.COLLECTION_GROUPS)
             .document(group.id)
@@ -184,7 +187,93 @@ class FirestoreManager private constructor(context: Context) {
         val inviteCode = doc.getString("inviteCode") ?: return null
         val memberIds = (doc.get("memberIds") as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
         val createdBy = doc.getString("createdBy") ?: return null
-        return Group(id, name, inviteCode, memberIds, createdBy)
+        val blockedUids = (doc.get("blockedUids") as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
+        return Group(id, name, inviteCode, memberIds, createdBy, blockedUids)
+    }
+
+    /** Creates a PENDING join request; does not add the user to the group. */
+    fun createJoinRequest(groupId: String, requesterUid: String, callback: (Boolean, String?) -> Unit) {
+        if (groupId.isBlank() || requesterUid.isBlank()) {
+            callback(false, "Invalid group or user")
+            return
+        }
+        val id = java.util.UUID.randomUUID().toString()
+        val data = hashMapOf<String, Any>(
+            "id" to id,
+            "groupId" to groupId,
+            "requesterUid" to requesterUid,
+            "status" to JoinRequest.STATUS_PENDING,
+            "createdAt" to FieldValue.serverTimestamp()
+        )
+        db.collection(Constants.Firestore.COLLECTION_JOIN_REQUESTS)
+            .document(id)
+            .set(data)
+            .addOnSuccessListener { callback(true, null) }
+            .addOnFailureListener { e -> callback(false, e.message ?: "Failed to create join request") }
+    }
+
+    /** Returns true if there is already a PENDING join request for this (groupId, requesterUid). */
+    fun hasPendingJoinRequest(groupId: String, requesterUid: String, callback: (Boolean, String?) -> Unit) {
+        if (groupId.isBlank() || requesterUid.isBlank()) {
+            callback(false, null)
+            return
+        }
+        db.collection(Constants.Firestore.COLLECTION_JOIN_REQUESTS)
+            .whereEqualTo("groupId", groupId)
+            .whereEqualTo("requesterUid", requesterUid)
+            .whereEqualTo("status", JoinRequest.STATUS_PENDING)
+            .limit(1)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                callback(snapshot?.documents?.isNotEmpty() == true, null)
+            }
+            .addOnFailureListener { e -> callback(false, e.message) }
+    }
+
+    private fun documentToJoinRequest(doc: com.google.firebase.firestore.DocumentSnapshot): JoinRequest? {
+        val id = doc.getString("id") ?: doc.id
+        val groupId = doc.getString("groupId") ?: return null
+        val requesterUid = doc.getString("requesterUid") ?: return null
+        val status = doc.getString("status") ?: return null
+        val createdAt = doc.getTimestamp("createdAt")?.toDate()?.time
+        return JoinRequest(id, groupId, requesterUid, status, createdAt)
+    }
+
+    /** Real-time listener for a user's join requests (for "My Requests" on Home). Order: newest first; caller should sort PENDING first and take 5. */
+    fun listenToJoinRequestsForUser(uid: String, callback: (List<JoinRequest>) -> Unit): ListenerRegistration {
+        if (uid.isBlank()) {
+            callback(emptyList())
+            return ListenerRegistration { }
+        }
+        return db.collection(Constants.Firestore.COLLECTION_JOIN_REQUESTS)
+            .whereEqualTo("requesterUid", uid)
+            .limit(30)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    android.util.Log.w("FirestoreManager", "listenToJoinRequestsForUser failed (add index?): ${e.message}", e)
+                    callback(emptyList())
+                    return@addSnapshotListener
+                }
+                val list = snapshot?.documents?.mapNotNull { documentToJoinRequest(it) } ?: emptyList()
+                callback(list)
+            }
+    }
+
+    /** Batch get groups by ids; returns map groupId -> Group (for resolving team names in My Requests). */
+    fun getGroupsByIds(ids: List<String>, callback: (Map<String, Group>) -> Unit) {
+        if (ids.isEmpty()) {
+            callback(emptyMap())
+            return
+        }
+        val distinctIds = ids.distinct().take(30)
+        db.collection(Constants.Firestore.COLLECTION_GROUPS)
+            .whereIn(FieldPath.documentId(), distinctIds)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val map = snapshot?.documents?.mapNotNull { documentToGroup(it) }?.associateBy { it.id } ?: emptyMap()
+                callback(map)
+            }
+            .addOnFailureListener { callback(emptyMap()) }
     }
 
     fun createLinkCode(creatorUid: String, creatorRole: String, groupId: String, callback: (String?, String?) -> Unit) {

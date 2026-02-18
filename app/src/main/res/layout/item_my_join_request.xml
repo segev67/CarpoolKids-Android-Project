@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/Widget.CarpoolKids.CardView.Dashboard"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/spacing_sm"
+    app:cardCornerRadius="@dimen/card_corner_radius"
+    app:cardElevation="@dimen/card_elevation">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="@dimen/card_padding">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/item_my_request_group_name"
+                style="@style/TextAppearance.Home.TeamName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="Group name" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/item_my_request_time"
+                style="@style/TextAppearance.Home.TeamSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_xs"
+                tools:text="2 hours ago" />
+        </LinearLayout>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/item_my_request_status"
+            style="@style/Widget.MaterialComponents.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="@dimen/text_badge_size"
+            app:chipMinHeight="24dp"
+            tools:text="PENDING" />
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

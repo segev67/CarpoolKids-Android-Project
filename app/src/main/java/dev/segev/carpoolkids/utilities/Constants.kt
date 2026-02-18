@@ -13,6 +13,7 @@ class Constants {
         const val COLLECTION_USERS: String = "users"
         const val COLLECTION_GROUPS: String = "groups"
         const val COLLECTION_LINK_CODES: String = "link_codes"
+        const val COLLECTION_JOIN_REQUESTS: String = "join_requests"
     }
 
     object LinkCode {

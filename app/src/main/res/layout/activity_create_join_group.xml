@@ -67,6 +67,29 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/input_group_name" />
 
+    <!-- Shown only for CHILD: replaces entire create section. PARENT sees create section instead. -->
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/child_create_group_message"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="28dp"
+        android:gravity="center"
+        android:text="@string/child_create_group_info"
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/create_join_title"
+        tools:visibility="visible" />
+
+    <androidx.constraintlayout.widget.Barrier
+        android:id="@+id/above_join_section_barrier"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:barrierDirection="bottom"
+        app:constraint_referenced_ids="btn_create_group,child_create_group_message" />
+
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/join_section_label"
         android:layout_width="wrap_content"
@@ -77,7 +100,7 @@
         android:textColor="@color/text_secondary"
         android:textSize="14sp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btn_create_group" />
+        app:layout_constraintTop_toBottomOf="@id/above_join_section_barrier" />
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/input_invite_code"

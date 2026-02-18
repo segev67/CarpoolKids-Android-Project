@@ -9,6 +9,8 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.commit
+import com.google.firebase.auth.FirebaseAuth
+import dev.segev.carpoolkids.data.GroupRepository
 import dev.segev.carpoolkids.databinding.ActivityGroupDashboardBinding
 
 class GroupDashboardActivity : AppCompatActivity(), DashboardHomeListener {
@@ -65,6 +67,18 @@ class GroupDashboardActivity : AppCompatActivity(), DashboardHomeListener {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        currentGroupId = intent.getStringExtra(EXTRA_GROUP_ID).orEmpty()
+        role = intent.getStringExtra(EXTRA_ROLE)
+        // Refresh visible fragment if Home is showing (e.g. after "Continue without group").
+        val home = supportFragmentManager.findFragmentByTag(TAG_HOME) as? DashboardHomeFragment
+        if (home != null) {
+            showHomeFragment()
+        }
+    }
+
     // Set up bottom nav: switch between Home, Schedule, Group, Drivers fragments.
     private fun initViews() {
         binding.dashboardBottomNav.setOnItemSelectedListener { item ->
@@ -81,13 +95,7 @@ class GroupDashboardActivity : AppCompatActivity(), DashboardHomeListener {
                 }
                 R.id.nav_group -> {
                     supportFragmentManager.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
-                    supportFragmentManager.commit {
-                        replace(
-                            R.id.dashboard_fragment_container,
-                            GroupFragment.newInstance(currentGroupId, role.orEmpty()),
-                            "group"
-                        )
-                    }
+                    showGroupTabWithCurrentGroup()
                     true
                 }
                 R.id.nav_drive -> {
@@ -98,6 +106,33 @@ class GroupDashboardActivity : AppCompatActivity(), DashboardHomeListener {
                 }
                 else -> false
             }
+        }
+    }
+
+    // If no group is selected but user has groups, pick the first so Group tab (and Invite) have a valid group.
+    private fun showGroupTabWithCurrentGroup() {
+        if (currentGroupId.isNotEmpty()) {
+            showGroupFragment()
+            return
+        }
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        if (uid == null) {
+            showGroupFragment()
+            return
+        }
+        GroupRepository.getMyGroups(uid) { groups, _ ->
+            if (groups.isNotEmpty()) reloadGroup(groups.first().id)
+            showGroupFragment()
+        }
+    }
+
+    private fun showGroupFragment() {
+        supportFragmentManager.commit {
+            replace(
+                R.id.dashboard_fragment_container,
+                GroupFragment.newInstance(currentGroupId, role.orEmpty()),
+                "group"
+            )
         }
     }
 

@@ -173,12 +173,60 @@
             app:layout_constraintTop_toBottomOf="@id/dashboard_home_today_label"
             tools:visibility="visible" />
 
+        <!-- Barrier based only on variable content (card OR no-training message), not the section label -->
         <androidx.constraintlayout.widget.Barrier
             android:id="@+id/dashboard_home_below_today_barrier"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:barrierDirection="bottom"
-            app:constraint_referenced_ids="dashboard_home_today_label,dashboard_home_today_card,dashboard_home_no_training_message" />
+            app:constraint_referenced_ids="dashboard_home_today_card,dashboard_home_no_training_message" />
+
+        <!-- My Requests section -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/dashboard_home_my_requests_label"
+            style="@style/TextAppearance.Dashboard.SectionLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_lg"
+            android:text="@string/my_requests_section_title"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/dashboard_home_below_today_barrier" />
+
+        <!-- Exactly one of empty vs list is visible; default empty so section never collapses -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/dashboard_home_my_requests_empty"
+            style="@style/TextAppearance.Home.TeamSubtitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/card_margin_between"
+            android:gravity="center"
+            android:text="@string/my_requests_empty"
+            android:visibility="visible"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/dashboard_home_my_requests_label"
+            tools:visibility="visible" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/dashboard_home_my_requests_list"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_sm"
+            android:nestedScrollingEnabled="false"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/dashboard_home_my_requests_label"
+            tools:listitem="@layout/item_my_join_request"
+            tools:visibility="visible" />
+
+        <!-- Barrier based only on dynamic content (empty message OR list), not the section label -->
+        <androidx.constraintlayout.widget.Barrier
+            android:id="@+id/dashboard_home_below_my_requests_barrier"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:barrierDirection="bottom"
+            app:constraint_referenced_ids="dashboard_home_my_requests_empty,dashboard_home_my_requests_list" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/dashboard_home_btn_teams_list"
@@ -189,7 +237,7 @@
             android:text="@string/btn_teams_list"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/dashboard_home_below_today_barrier" />
+            app:layout_constraintTop_toBottomOf="@id/dashboard_home_below_my_requests_barrier" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/dashboard_home_btn_create_join"

@@ -24,8 +24,10 @@
     <string name="btn_join_group">Join group</string>
     <string name="group_name_required">Enter a group name.</string>
     <string name="invite_code_required">Enter the invite code.</string>
+    <string name="join_request_sent">Join request sent. The group admin will review your request.</string>
     <string name="create_join_error">Something went wrong. Try again.</string>
     <string name="btn_continue_without_group">Continue without a group</string>
+    <string name="child_create_group_info">Only a parent can create a group.\nAsk a parent to create one, or join using a code.</string>
     <!-- Group dashboard -->
     <string name="upcoming_sessions">Upcoming Sessions</string>
     <string name="no_sessions_yet">No sessions yet. Add a practice or view schedule.</string>
@@ -92,4 +94,11 @@
     <string name="invite_code_copied">Code copied to clipboard</string>
     <string name="invite_code_regenerated">Invite code updated</string>
     <string name="invite_code_no_group">You\'re not in a group yet. Create or join a group to start inviting friends.</string>
+    <!-- My Requests (Home) -->
+    <string name="my_requests_section_title">My Requests</string>
+    <string name="my_requests_empty">No join requests yet. Use Create/Join Group to request to join a team.</string>
+    <string name="status_pending">PENDING</string>
+    <string name="status_approved">APPROVED</string>
+    <string name="status_declined">DECLINED</string>
+    <string name="status_blocked">BLOCKED</string>
 </resources>

@@ -5,5 +5,6 @@ data class Group(
     val name: String,
     val inviteCode: String,
     val memberIds: List<String>,
-    val createdBy: String
+    val createdBy: String,
+    val blockedUids: List<String> = emptyList()
 )

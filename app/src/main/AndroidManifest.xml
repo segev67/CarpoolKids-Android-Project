@@ -39,6 +39,7 @@
         <activity
             android:name=".GroupDashboardActivity"
             android:exported="false"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.CarpoolKids" />
         <activity
             android:name=".TeamsListActivity"

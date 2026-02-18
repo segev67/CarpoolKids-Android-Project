@@ -2,16 +2,23 @@ package dev.segev.carpoolkids
 
 import android.content.Intent
 import android.os.Bundle
+import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.firebase.ui.auth.AuthUI
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.ListenerRegistration
 import dev.segev.carpoolkids.data.GroupRepository
 import dev.segev.carpoolkids.data.TrainingRepository
 import dev.segev.carpoolkids.data.TrainingRepositoryImpl
 import dev.segev.carpoolkids.databinding.FragmentDashboardHomeBinding
+import dev.segev.carpoolkids.model.JoinRequest
 import dev.segev.carpoolkids.model.TodayTrainingUiModel
+import dev.segev.carpoolkids.ui.home.MyJoinRequestsAdapter
+import dev.segev.carpoolkids.ui.home.MyRequestRow
 
 /**
  * Home tab of the Group Dashboard: group name, today's training (if any),
@@ -23,6 +30,8 @@ class DashboardHomeFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val trainingRepository: TrainingRepository = TrainingRepositoryImpl
+    private val myRequestsAdapter = MyJoinRequestsAdapter()
+    private var myRequestsListener: ListenerRegistration? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -54,11 +63,54 @@ class DashboardHomeFragment : Fragment() {
                 requireActivity().finish()
             }
         }
+        binding.dashboardHomeMyRequestsList.layoutManager = LinearLayoutManager(requireContext())
+        binding.dashboardHomeMyRequestsList.adapter = myRequestsAdapter
+        startMyRequestsListener()
     }
 
     override fun onDestroyView() {
+        myRequestsListener?.remove()
+        myRequestsListener = null
         super.onDestroyView()
         _binding = null
+    }
+
+    /** Real-time listener: PENDING first, then newest; max 5; resolve group names. */
+    private fun startMyRequestsListener() {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        myRequestsListener = GroupRepository.listenToMyJoinRequests(uid) { requests ->
+            if (_binding == null) return@listenToMyJoinRequests
+            val sorted = requests
+                .sortedWith(compareBy<JoinRequest> { it.status != JoinRequest.STATUS_PENDING }.thenByDescending { it.createdAt ?: 0L })
+                .take(5)
+            if (sorted.isEmpty()) {
+                binding.dashboardHomeMyRequestsEmpty.visibility = View.VISIBLE
+                binding.dashboardHomeMyRequestsList.visibility = View.GONE
+                myRequestsAdapter.submitList(emptyList())
+                return@listenToMyJoinRequests
+            }
+            val groupIds = sorted.map { it.groupId }.distinct()
+            GroupRepository.getGroupsByIds(groupIds) { groupMap ->
+                if (_binding == null) return@getGroupsByIds
+                val rows = sorted.map { req ->
+                    val name = groupMap[req.groupId]?.name ?: getString(R.string.example_group_name)
+                    val relative = req.createdAt?.let { ts ->
+                        DateUtils.getRelativeTimeSpanString(ts, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS, DateUtils.FORMAT_ABBREV_RELATIVE).toString()
+                    } ?: ""
+                    val statusLabel = when (req.status) {
+                        JoinRequest.STATUS_PENDING -> getString(R.string.status_pending)
+                        JoinRequest.STATUS_APPROVED -> getString(R.string.status_approved)
+                        JoinRequest.STATUS_DECLINED -> getString(R.string.status_declined)
+                        JoinRequest.STATUS_BLOCKED -> getString(R.string.status_blocked)
+                        else -> req.status
+                    }
+                    MyRequestRow(name, statusLabel, relative)
+                }
+                binding.dashboardHomeMyRequestsEmpty.visibility = View.GONE
+                binding.dashboardHomeMyRequestsList.visibility = View.VISIBLE
+                myRequestsAdapter.submitList(rows)
+            }
+        }
     }
 
     /**
@@ -71,11 +123,13 @@ class DashboardHomeFragment : Fragment() {
     }
 
     private fun loadGroupAndToday(groupId: String) {
+        if (_binding == null) return
         binding.dashboardHomeGroupName.visibility = View.GONE
         binding.dashboardHomeTodayCard.visibility = View.GONE
         binding.dashboardHomeNoTrainingMessage.visibility = View.GONE
 
         GroupRepository.getGroupById(groupId) { group, _ ->
+            if (_binding == null) return@getGroupById
             if (group != null) {
                 binding.dashboardHomeGroupName.text = group.name
                 binding.dashboardHomeGroupName.visibility = View.VISIBLE
@@ -98,6 +152,7 @@ class DashboardHomeFragment : Fragment() {
 
     // Show today's training card and hide rest-day message.
     private fun showTodayCard(model: TodayTrainingUiModel) {
+        if (_binding == null) return
         binding.dashboardHomeNoTrainingMessage.visibility = View.GONE
         binding.dashboardHomeTodayCard.visibility = View.VISIBLE
         binding.dashboardHomeTodayTeamName.text = model.teamName

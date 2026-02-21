@@ -94,6 +94,7 @@
     <string name="group_details_total">%d total</string>
     <string name="group_details_parents">%d parents</string>
     <string name="group_details_children">%d children</string>
+    <string name="group_details_summary_format">%1$d total · %2$d parents · %3$d children</string>
     <string name="group_details_members_empty">No members yet.</string>
     <string name="group_details_you_badge">You</string>
     <string name="group_details_role_parent">PARENT</string>

@@ -76,9 +76,7 @@ class GroupDetailsFragment : Fragment() {
                 }
                 val parents = rows.count { it.role == Constants.UserRole.PARENT }
                 val children = rows.count { it.role == Constants.UserRole.CHILD }
-                binding.groupDetailsSummary.text = getString(R.string.group_details_total, rows.size) +
-                    " · " + getString(R.string.group_details_parents, parents) +
-                    " · " + getString(R.string.group_details_children, children)
+                binding.groupDetailsSummary.text = getString(R.string.group_details_summary_format, rows.size, parents, children)
                 if (rows.isEmpty()) {
                     binding.groupDetailsEmpty.visibility = View.VISIBLE
                     binding.groupDetailsList.visibility = View.GONE

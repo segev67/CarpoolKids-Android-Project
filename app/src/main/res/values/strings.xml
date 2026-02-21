@@ -77,6 +77,16 @@
     <string name="btn_create_join_group">Create/Join Group</string>
     <string name="coming_soon">Coming soon</string>
     <string name="dashboard_schedule_title">Weekly Practices</string>
+    <string name="schedule_no_practices">No practices this week.</string>
+    <string name="schedule_to">To:</string>
+    <string name="schedule_from">From:</string>
+    <string name="schedule_no_driver">No driver</string>
+    <string name="schedule_time_range">%1$s – %2$s</string>
+    <string name="schedule_week_format">%1$d – %2$d %3$s %4$d</string>
+    <!-- Same as above, explicit name for 4-arg week label (same month and year). -->
+    <string name="schedule_week_format_with_year">%1$d – %2$d %3$s %4$d</string>
+    <string name="schedule_week_prev">Previous week</string>
+    <string name="schedule_week_next">Next week</string>
     <string name="dashboard_group_title">Group details</string>
     <string name="dashboard_drivers_requests_title">Drivers requests</string>
     <!-- Group tab hub -->

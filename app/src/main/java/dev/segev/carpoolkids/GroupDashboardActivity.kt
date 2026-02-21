@@ -89,7 +89,11 @@ class GroupDashboardActivity : AppCompatActivity(), DashboardHomeListener {
                 }
                 R.id.nav_schedule -> {
                     supportFragmentManager.commit {
-                        replace(R.id.dashboard_fragment_container, ScheduleFragment(), "schedule")
+                        replace(
+                            R.id.dashboard_fragment_container,
+                            ScheduleFragment.newInstance(currentGroupId, role.orEmpty()),
+                            "schedule"
+                        )
                     }
                     true
                 }

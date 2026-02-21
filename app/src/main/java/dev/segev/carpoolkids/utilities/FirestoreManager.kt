@@ -1,14 +1,17 @@
 package dev.segev.carpoolkids.utilities
 
 import android.content.Context
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import dev.segev.carpoolkids.model.Group
 import dev.segev.carpoolkids.model.JoinRequest
+import dev.segev.carpoolkids.model.Practice
 import dev.segev.carpoolkids.model.UserProfile
 import java.lang.ref.WeakReference
+import java.util.Date
 
 class FirestoreManager private constructor(context: Context) {
     private val contextRef = WeakReference(context)
@@ -18,7 +21,7 @@ class FirestoreManager private constructor(context: Context) {
         user: UserProfile,
         callback: (Boolean, String?) -> Unit
     ) {
-        val data = hashMapOf<String, Any>(
+        val data = hashMapOf(
             "uid" to user.uid,
             "displayName" to (user.displayName ?: ""),
             "email" to (user.email ?: ""),
@@ -48,14 +51,14 @@ class FirestoreManager private constructor(context: Context) {
         val parentUids = (doc.get("parentUids") as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
         val childUids = (doc.get("childUids") as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
         return UserProfile(
-            uid = uid,
-            email = doc.getString("email"),
-            displayName = doc.getString("displayName"),
-            role = role,
-            photoUrl = photoUrl,
-            createdAt = createdAt,
-            parentUids = parentUids,
-            childUids = childUids
+            uid,
+            doc.getString("email"),
+            doc.getString("displayName"),
+            role,
+            photoUrl,
+            createdAt,
+            parentUids,
+            childUids
         )
     }
 
@@ -110,7 +113,7 @@ class FirestoreManager private constructor(context: Context) {
             "inviteCode" to group.inviteCode,
             "memberIds" to group.memberIds,
             "createdBy" to group.createdBy,
-            "blockedUids" to (group.blockedUids.ifEmpty { emptyList<String>() })
+            "blockedUids" to (group.blockedUids.ifEmpty { emptyList() })
         )
         db.collection(Constants.Firestore.COLLECTION_GROUPS)
             .document(group.id)
@@ -236,7 +239,7 @@ class FirestoreManager private constructor(context: Context) {
             return
         }
         val id = java.util.UUID.randomUUID().toString()
-        val data = hashMapOf<String, Any>(
+        val data = hashMapOf(
             "id" to id,
             "groupId" to groupId,
             "requesterUid" to requesterUid,
@@ -381,6 +384,141 @@ class FirestoreManager private constructor(context: Context) {
             }
     }
 
+    // ---------- Practices (Schedule tab) ----------
+
+    fun createPractice(practice: Practice, callback: (Boolean, String?) -> Unit) {
+        val data = hashMapOf(
+            "id" to practice.id,
+            "groupId" to practice.groupId,
+            "date" to Timestamp(Date(practice.dateMillis)),
+            "startTime" to practice.startTime,
+            "endTime" to practice.endTime,
+            "location" to practice.location,
+            "driverToUid" to (practice.driverToUid ?: ""),
+            "driverFromUid" to (practice.driverFromUid ?: ""),
+            "createdAt" to FieldValue.serverTimestamp()
+        ).apply {
+            practice.createdBy?.let { put("createdBy", it) }
+        }
+        db.collection(Constants.Firestore.COLLECTION_PRACTICES)
+            .document(practice.id)
+            .set(data)
+            .addOnSuccessListener { callback(true, null) }
+            .addOnFailureListener { e ->
+                val message = e.message ?: "Failed to create practice"
+                SignalManager.getInstance().toast(message, SignalManager.ToastLength.LONG)
+                callback(false, message)
+            }
+    }
+
+    fun getPracticeById(practiceId: String, callback: (Practice?, String?) -> Unit) {
+        if (practiceId.isBlank()) {
+            callback(null, "Invalid practice id")
+            return
+        }
+        db.collection(Constants.Firestore.COLLECTION_PRACTICES)
+            .document(practiceId)
+            .get()
+            .addOnSuccessListener { doc ->
+                if (doc != null && doc.exists()) {
+                    documentToPractice(doc)?.let { callback(it, null) }
+                        ?: callback(null, "Invalid practice data")
+                } else {
+                    callback(null, "Practice not found")
+                }
+            }
+            .addOnFailureListener { e -> callback(null, e.message ?: "Failed to load practice") }
+    }
+
+    /**
+     * Practices for a group in a date range (inclusive). Use week start/end day at midnight.
+     * Results ordered by date; caller may sort by startTime per day.
+     */
+    fun getPracticesForWeek(
+        groupId: String,
+        weekStartMillis: Long,
+        weekEndMillis: Long,
+        callback: (List<Practice>, String?) -> Unit
+    ) {
+        if (groupId.isBlank()) {
+            callback(emptyList(), null)
+            return
+        }
+        val startTimestamp = Timestamp(Date(weekStartMillis))
+        val endTimestamp = Timestamp(Date(weekEndMillis))
+        db.collection(Constants.Firestore.COLLECTION_PRACTICES)
+            .whereEqualTo("groupId", groupId)
+            .whereGreaterThanOrEqualTo("date", startTimestamp)
+            .whereLessThanOrEqualTo("date", endTimestamp)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val list = snapshot?.documents?.mapNotNull { documentToPractice(it) }
+                    ?.sortedWith(compareBy({ it.dateMillis }, { it.startTime })) ?: emptyList()
+                callback(list, null)
+            }
+            .addOnFailureListener { e ->
+                val message = e.message ?: "Failed to load practices"
+                callback(emptyList(), message)
+            }
+    }
+
+    fun updatePractice(
+        practiceId: String,
+        startTime: String? = null,
+        endTime: String? = null,
+        location: String? = null,
+        driverToUid: String? = null,
+        driverFromUid: String? = null,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        if (practiceId.isBlank()) {
+            callback(false, "Invalid practice id")
+            return
+        }
+        val updates = mutableMapOf<String, Any>()
+        startTime?.let { updates["startTime"] = it }
+        endTime?.let { updates["endTime"] = it }
+        location?.let { updates["location"] = it }
+        driverToUid?.let { updates["driverToUid"] = it }
+        driverFromUid?.let { updates["driverFromUid"] = it }
+        if (updates.isEmpty()) {
+            callback(true, null)
+            return
+        }
+        db.collection(Constants.Firestore.COLLECTION_PRACTICES)
+            .document(practiceId)
+            .update(updates)
+            .addOnSuccessListener { callback(true, null) }
+            .addOnFailureListener { e ->
+                callback(false, e.message ?: "Failed to update practice")
+            }
+    }
+
+    private fun documentToPractice(doc: com.google.firebase.firestore.DocumentSnapshot): Practice? {
+        val id = doc.getString("id") ?: doc.id
+        val groupId = doc.getString("groupId") ?: return null
+        val dateMillis = doc.getTimestamp("date")?.toDate()?.time ?: return null
+        val startTime = doc.getString("startTime") ?: return null
+        val endTime = doc.getString("endTime") ?: return null
+        val location = doc.getString("location") ?: return null
+        val driverToUid = doc.getString("driverToUid")?.takeIf { it.isNotEmpty() }
+        val driverFromUid = doc.getString("driverFromUid")?.takeIf { it.isNotEmpty() }
+        val createdBy = doc.getString("createdBy")
+        val createdAt = doc.getTimestamp("createdAt")?.toDate()?.time
+        return Practice(
+            id,
+            groupId,
+            dateMillis,
+            startTime,
+            endTime,
+            location,
+            driverToUid,
+            driverFromUid,
+            createdBy,
+            createdAt
+        )
+    }
+
     /** Batch get groups by ids; returns map groupId -> Group (for resolving team names in My Requests). */
     fun getGroupsByIds(ids: List<String>, callback: (Map<String, Group>) -> Unit) {
         if (ids.isEmpty()) {
@@ -400,7 +538,7 @@ class FirestoreManager private constructor(context: Context) {
 
     fun createLinkCode(creatorUid: String, creatorRole: String, groupId: String, callback: (String?, String?) -> Unit) {
         val code = java.util.UUID.randomUUID().toString().replace("-", "").take(6).uppercase()
-        val data = hashMapOf<String, Any>(
+        val data = hashMapOf(
             "creatorUid" to creatorUid,
             "creatorRole" to creatorRole,
             "groupId" to groupId,

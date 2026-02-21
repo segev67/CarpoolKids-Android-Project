@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/dashboard_background"
+    android:orientation="vertical"
+    android:padding="@dimen/dashboard_screen_padding">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/schedule_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/dashboard_schedule_title"
+            android:textSize="@dimen/text_title_size"
+            android:textColor="@color/dashboard_text_primary"
+            android:textStyle="bold" />
+
+        <!-- Week selector -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_lg"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/schedule_week_prev"
+                style="@style/Widget.CarpoolKids.Button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:contentDescription="@string/schedule_week_prev"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="@dimen/spacing_sm"
+                android:text=""
+                app:icon="@drawable/ic_left_arrow"
+                app:iconTint="@color/white"
+                app:iconSize="24dp" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/schedule_week_label"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:textSize="@dimen/text_card_time_size"
+                android:textColor="@color/dashboard_text_primary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/schedule_week_next"
+                style="@style/Widget.CarpoolKids.Button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:contentDescription="@string/schedule_week_next"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="@dimen/spacing_sm"
+                android:text=""
+                app:icon="@drawable/ic_right_arrow"
+                app:iconTint="@color/white"
+                app:iconSize="24dp" />
+        </LinearLayout>
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/schedule_empty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_section"
+            android:gravity="center"
+            android:text="@string/schedule_no_practices"
+            android:textSize="@dimen/text_section_label_size"
+            android:textColor="@color/dashboard_text_secondary"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/schedule_list"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="@dimen/spacing_sm"
+            android:nestedScrollingEnabled="false"
+            android:visibility="gone"
+            tools:listitem="@layout/item_schedule_practice"
+            tools:visibility="visible" />
+</LinearLayout>

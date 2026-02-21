@@ -80,12 +80,24 @@
     <string name="dashboard_group_title">Group details</string>
     <string name="dashboard_drivers_requests_title">Drivers requests</string>
     <!-- Group tab hub -->
+    <string name="carpool_header_format">Carpool: %s</string>
+    <string name="group_hub_header_no_group">No active group</string>
+    <string name="group_hub_header_subtitle">Join or create a group to start managing your carpool.</string>
     <string name="group_hub_title">Group</string>
     <string name="group_hub_details">Group details</string>
     <string name="group_hub_invite">Invite to group</string>
     <string name="group_hub_join_requests">Join requests (%d)</string>
     <string name="group_screen_join_requests">Join requests</string>
     <string name="group_hub_blocked_users">Blocked users</string>
+    <!-- Group Details screen -->
+    <string name="group_details_members_summary">Members</string>
+    <string name="group_details_total">%d total</string>
+    <string name="group_details_parents">%d parents</string>
+    <string name="group_details_children">%d children</string>
+    <string name="group_details_members_empty">No members yet.</string>
+    <string name="group_details_you_badge">You</string>
+    <string name="group_details_role_parent">PARENT</string>
+    <string name="group_details_role_child">CHILD</string>
     <!-- Invite code screen -->
     <string name="invite_code_title">Invite to group</string>
     <string name="invite_code_label">Invite code</string>

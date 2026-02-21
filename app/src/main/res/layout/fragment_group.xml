@@ -13,10 +13,35 @@
         android:orientation="vertical"
         android:padding="@dimen/dashboard_screen_padding">
 
+        <!-- Carpool: <group name> or "No active group" -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/group_hub_header_carpool"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="@dimen/text_title_size"
+            android:textColor="@color/dashboard_text_primary"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end"
+            tools:text="Carpool: My Team" />
+
+        <!-- Shown only when no active group -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/group_hub_header_subtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_xs"
+            android:textSize="@dimen/text_section_label_size"
+            android:textColor="@color/dashboard_text_secondary"
+            android:text="@string/group_hub_header_subtitle"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/group_hub_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_lg"
             android:text="@string/group_hub_title"
             android:textSize="@dimen/text_title_size"
             android:textColor="@color/dashboard_text_primary"

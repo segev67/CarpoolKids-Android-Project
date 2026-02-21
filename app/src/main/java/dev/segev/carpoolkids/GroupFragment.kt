@@ -35,6 +35,18 @@ class GroupFragment : Fragment() {
         val groupId = arguments?.getString(ARG_GROUP_ID).orEmpty()
         val role = arguments?.getString(ARG_ROLE).orEmpty()
 
+        if (groupId.isEmpty()) {
+            binding.groupHubHeaderCarpool.text = getString(R.string.carpool_header_format, getString(R.string.group_hub_header_no_group))
+            binding.groupHubHeaderSubtitle.visibility = View.VISIBLE
+        } else {
+            binding.groupHubHeaderSubtitle.visibility = View.GONE
+            GroupRepository.getGroupById(groupId) { group, _ ->
+                if (_binding == null) return@getGroupById
+                val name = group?.name?.takeIf { it.isNotEmpty() } ?: getString(R.string.group_hub_header_no_group)
+                binding.groupHubHeaderCarpool.text = getString(R.string.carpool_header_format, name)
+            }
+        }
+
         binding.groupHubCardBlocked.visibility =
             if (role == Constants.UserRole.PARENT) View.VISIBLE else View.GONE
 

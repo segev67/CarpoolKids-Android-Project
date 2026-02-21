@@ -6,17 +6,20 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
+import dev.segev.carpoolkids.data.GroupRepository
 import dev.segev.carpoolkids.databinding.FragmentGroupBinding
+import dev.segev.carpoolkids.model.JoinRequest
 import dev.segev.carpoolkids.utilities.Constants
 
 /**
  * Group tab hub: Group details, Invite to group, Join requests (N), Blocked users (PARENT only).
- * Each row opens a dedicated screen. Empty group: show nothing or message (handled by caller).
+ * Each row opens a dedicated screen. N = live PENDING count for the group.
  */
 class GroupFragment : Fragment() {
 
     private var _binding: FragmentGroupBinding? = null
     private val binding get() = _binding!!
+    private var joinRequestsListener: com.google.firebase.firestore.ListenerRegistration? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -32,9 +35,14 @@ class GroupFragment : Fragment() {
         val groupId = arguments?.getString(ARG_GROUP_ID).orEmpty()
         val role = arguments?.getString(ARG_ROLE).orEmpty()
 
-        binding.groupHubLabelJoinRequests.text = getString(R.string.group_hub_join_requests, 0)
         binding.groupHubCardBlocked.visibility =
             if (role == Constants.UserRole.PARENT) View.VISIBLE else View.GONE
+
+        joinRequestsListener = GroupRepository.listenToJoinRequestsForGroup(groupId) { requests ->
+            if (_binding == null) return@listenToJoinRequestsForGroup
+            val pendingCount = requests.count { it.status == JoinRequest.STATUS_PENDING }
+            binding.groupHubLabelJoinRequests.text = getString(R.string.group_hub_join_requests, pendingCount)
+        }
 
         binding.groupHubCardDetails.setOnClickListener {
             openScreen(GroupDetailsFragment.newInstance(groupId, role), "group_details")
@@ -58,6 +66,8 @@ class GroupFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        joinRequestsListener?.remove()
+        joinRequestsListener = null
         super.onDestroyView()
         _binding = null
     }

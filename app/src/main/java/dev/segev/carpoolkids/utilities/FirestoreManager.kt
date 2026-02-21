@@ -39,6 +39,26 @@ class FirestoreManager private constructor(context: Context) {
             }
     }
 
+    private fun documentToUserProfile(doc: com.google.firebase.firestore.DocumentSnapshot): UserProfile? {
+        if (!doc.exists()) return null
+        val uid = doc.getString("uid") ?: doc.id
+        val photoUrl = doc.getString("photoUrl")?.takeIf { it.isNotEmpty() }
+        val role = doc.getString("role") ?: ""
+        val createdAt = doc.getTimestamp("createdAt")?.toDate()?.time
+        val parentUids = (doc.get("parentUids") as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
+        val childUids = (doc.get("childUids") as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
+        return UserProfile(
+            uid = uid,
+            email = doc.getString("email"),
+            displayName = doc.getString("displayName"),
+            role = role,
+            photoUrl = photoUrl,
+            createdAt = createdAt,
+            parentUids = parentUids,
+            childUids = childUids
+        )
+    }
+
     fun getUserProfile(
         uid: String,
         callback: (UserProfile?, String?) -> Unit
@@ -48,22 +68,8 @@ class FirestoreManager private constructor(context: Context) {
             .get()
             .addOnSuccessListener { doc ->
                 if (doc != null && doc.exists()) {
-                    val photoUrl = doc.getString("photoUrl")?.takeIf { it.isNotEmpty() }
-                    val role = doc.getString("role") ?: ""
-                    val createdAt = doc.getTimestamp("createdAt")?.toDate()?.time
-                    val parentUids = (doc.get("parentUids") as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
-                    val childUids = (doc.get("childUids") as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
-                    val profile = UserProfile(
-                        uid = doc.getString("uid") ?: uid,
-                        email = doc.getString("email"),
-                        displayName = doc.getString("displayName"),
-                        role = role,
-                        photoUrl = photoUrl,
-                        createdAt = createdAt,
-                        parentUids = parentUids,
-                        childUids = childUids
-                    )
-                    callback(profile, null)
+                    documentToUserProfile(doc)?.let { callback(it, null) }
+                        ?: callback(null, "Invalid profile data")
                 } else {
                     callback(null, "Profile not found")
                 }
@@ -73,6 +79,25 @@ class FirestoreManager private constructor(context: Context) {
                 SignalManager.getInstance().toast(message, SignalManager.ToastLength.LONG)
                 callback(null, message)
             }
+    }
+
+    /** Batch get user profiles by uid (for Join Requests requester display). Returns map uid -> UserProfile. */
+    fun getUsersByIds(uids: List<String>, callback: (Map<String, UserProfile>) -> Unit) {
+        if (uids.isEmpty()) {
+            callback(emptyMap())
+            return
+        }
+        val distinctIds = uids.distinct().take(30)
+        db.collection(Constants.Firestore.COLLECTION_USERS)
+            .whereIn(FieldPath.documentId(), distinctIds)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val map = snapshot?.documents?.mapNotNull { doc ->
+                    documentToUserProfile(doc)?.let { p -> doc.id to p }
+                }?.toMap() ?: emptyMap()
+                callback(map)
+            }
+            .addOnFailureListener { callback(emptyMap()) }
     }
 
     fun createGroup(
@@ -132,6 +157,19 @@ class FirestoreManager private constructor(context: Context) {
             }
             .addOnFailureListener { e ->
                 callback(null, e.message ?: "Failed to load group")
+            }
+    }
+
+    /** Real-time listener for a single group (e.g. Blocked Users screen). */
+    fun listenToGroup(groupId: String, callback: (Group?) -> Unit): ListenerRegistration {
+        if (groupId.isBlank()) {
+            callback(null)
+            return ListenerRegistration { }
+        }
+        return db.collection(Constants.Firestore.COLLECTION_GROUPS)
+            .document(groupId)
+            .addSnapshotListener { snapshot, _ ->
+                callback(snapshot?.let { documentToGroup(it) })
             }
     }
 
@@ -237,6 +275,90 @@ class FirestoreManager private constructor(context: Context) {
         val status = doc.getString("status") ?: return null
         val createdAt = doc.getTimestamp("createdAt")?.toDate()?.time
         return JoinRequest(id, groupId, requesterUid, status, createdAt)
+    }
+
+    /** Real-time listener for join requests of a group (Group tab Join Requests screen). */
+    fun listenToJoinRequestsForGroup(groupId: String, callback: (List<JoinRequest>) -> Unit): ListenerRegistration {
+        if (groupId.isBlank()) {
+            callback(emptyList())
+            return ListenerRegistration { }
+        }
+        return db.collection(Constants.Firestore.COLLECTION_JOIN_REQUESTS)
+            .whereEqualTo("groupId", groupId)
+            .limit(100)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    callback(emptyList())
+                    return@addSnapshotListener
+                }
+                val list = snapshot?.documents?.mapNotNull { documentToJoinRequest(it) } ?: emptyList()
+                callback(list)
+            }
+    }
+
+    /** Update join request status (APPROVED, DECLINED, or BLOCKED). */
+    fun updateJoinRequestStatus(requestId: String, status: String, callback: (Boolean, String?) -> Unit) {
+        if (requestId.isBlank() || status.isBlank()) {
+            callback(false, "Invalid request or status")
+            return
+        }
+        db.collection(Constants.Firestore.COLLECTION_JOIN_REQUESTS)
+            .document(requestId)
+            .update("status", status)
+            .addOnSuccessListener { callback(true, null) }
+            .addOnFailureListener { e -> callback(false, e.message ?: "Failed to update request") }
+    }
+
+    /** Add uid to group's blockedUids (FieldValue.arrayUnion). */
+    fun addBlockedUid(groupId: String, uid: String, callback: (Boolean, String?) -> Unit) {
+        if (groupId.isBlank() || uid.isBlank()) {
+            callback(false, "Invalid group or user")
+            return
+        }
+        db.collection(Constants.Firestore.COLLECTION_GROUPS)
+            .document(groupId)
+            .update("blockedUids", FieldValue.arrayUnion(uid))
+            .addOnSuccessListener { callback(true, null) }
+            .addOnFailureListener { e -> callback(false, e.message ?: "Failed to block user") }
+    }
+
+    /** Remove uid from group's blockedUids (FieldValue.arrayRemove). */
+    fun removeBlockedUid(groupId: String, uid: String, callback: (Boolean, String?) -> Unit) {
+        if (groupId.isBlank() || uid.isBlank()) {
+            callback(false, "Invalid group or user")
+            return
+        }
+        db.collection(Constants.Firestore.COLLECTION_GROUPS)
+            .document(groupId)
+            .update("blockedUids", FieldValue.arrayRemove(uid))
+            .addOnSuccessListener { callback(true, null) }
+            .addOnFailureListener { e -> callback(false, e.message ?: "Failed to unblock user") }
+    }
+
+    /** Delete join request documents for this (groupId, requesterUid) with status BLOCKED. Removes them from My Requests after unblock. */
+    fun deleteBlockedJoinRequestsForRequesterInGroup(groupId: String, requesterUid: String, callback: (Boolean, String?) -> Unit) {
+        if (groupId.isBlank() || requesterUid.isBlank()) {
+            callback(true, null)
+            return
+        }
+        db.collection(Constants.Firestore.COLLECTION_JOIN_REQUESTS)
+            .whereEqualTo("groupId", groupId)
+            .whereEqualTo("requesterUid", requesterUid)
+            .whereEqualTo("status", JoinRequest.STATUS_BLOCKED)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val docs = snapshot?.documents ?: emptyList()
+                if (docs.isEmpty()) {
+                    callback(true, null)
+                    return@addOnSuccessListener
+                }
+                val batch = db.batch()
+                docs.forEach { batch.delete(it.reference) }
+                batch.commit()
+                    .addOnSuccessListener { callback(true, null) }
+                    .addOnFailureListener { e -> callback(false, e.message ?: "Failed to delete request") }
+            }
+            .addOnFailureListener { e -> callback(false, e.message ?: "Failed to find request") }
     }
 
     /** Real-time listener for a user's join requests (for "My Requests" on Home). Order: newest first; caller should sort PENDING first and take 5. */

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/dashboard_background"
+    android:padding="@dimen/dashboard_screen_padding">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Section label (same pattern as dashboard_home_today_label, group_hub_title) -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/join_requests_title"
+            style="@style/TextAppearance.Dashboard.SectionLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/group_screen_join_requests" />
+
+        <!-- Empty state (same pattern as dashboard_home_no_training_message, dashboard_home_my_requests_empty) -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/join_requests_empty"
+            style="@style/TextAppearance.Home.TeamSubtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/card_margin_between"
+            android:gravity="center"
+            android:text="@string/join_requests_empty"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+        <!-- List (same pattern as dashboard_home_my_requests_list, blocked_users_list) -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/join_requests_list"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="@dimen/card_margin_between"
+            android:layout_marginBottom="@dimen/spacing_lg"
+            android:nestedScrollingEnabled="false"
+            android:visibility="gone"
+            tools:listitem="@layout/item_join_request_group"
+            tools:visibility="visible" />
+    </LinearLayout>
+</FrameLayout>

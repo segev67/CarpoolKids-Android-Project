@@ -16,6 +16,10 @@ object GroupRepository {
         FirestoreManager.getInstance().getGroupById(groupId, callback)
     }
 
+    /** Real-time listener for a single group (e.g. blockedUids for Blocked Users screen). */
+    fun listenToGroup(groupId: String, callback: (Group?) -> Unit): ListenerRegistration =
+        FirestoreManager.getInstance().listenToGroup(groupId, callback)
+
     fun getGroupByInviteCode(code: String, callback: (Group?, String?) -> Unit) {
         FirestoreManager.getInstance().getGroupByInviteCode(code, callback)
     }
@@ -78,6 +82,43 @@ object GroupRepository {
     /** Batch get groups by id; returns map groupId -> Group. */
     fun getGroupsByIds(ids: List<String>, callback: (Map<String, Group>) -> Unit) {
         FirestoreManager.getInstance().getGroupsByIds(ids, callback)
+    }
+
+    /** Real-time listener for join requests of a group (Group tab). */
+    fun listenToJoinRequestsForGroup(groupId: String, callback: (List<JoinRequest>) -> Unit): ListenerRegistration =
+        FirestoreManager.getInstance().listenToJoinRequestsForGroup(groupId, callback)
+
+    /** Update join request status to APPROVED, DECLINED, or BLOCKED. */
+    fun updateJoinRequestStatus(requestId: String, status: String, callback: (Boolean, String?) -> Unit) {
+        FirestoreManager.getInstance().updateJoinRequestStatus(requestId, status, callback)
+    }
+
+    /** Add uid to group's blockedUids. */
+    fun addBlockedUid(groupId: String, uid: String, callback: (Boolean, String?) -> Unit) {
+        FirestoreManager.getInstance().addBlockedUid(groupId, uid, callback)
+    }
+
+    /** Remove uid from group's blockedUids. */
+    fun removeBlockedUid(groupId: String, uid: String, callback: (Boolean, String?) -> Unit) {
+        FirestoreManager.getInstance().removeBlockedUid(groupId, uid, callback)
+    }
+
+    /** Delete BLOCKED join request(s) for this requester in group so they disappear from My Requests after unblock. */
+    fun deleteBlockedJoinRequestsForRequesterInGroup(groupId: String, requesterUid: String, callback: (Boolean, String?) -> Unit) {
+        FirestoreManager.getInstance().deleteBlockedJoinRequestsForRequesterInGroup(groupId, requesterUid, callback)
+    }
+
+    /** Approve join request: set status to APPROVED and add requester to group members. */
+    fun approveJoinRequest(groupId: String, requestId: String, requesterUid: String, callback: (Boolean, String?) -> Unit) {
+        FirestoreManager.getInstance().updateJoinRequestStatus(requestId, JoinRequest.STATUS_APPROVED) { ok, err ->
+            if (!ok) {
+                callback(false, err)
+                return@updateJoinRequestStatus
+            }
+            FirestoreManager.getInstance().addMemberToGroup(groupId, requesterUid) { addOk, addErr ->
+                callback(addOk, addErr)
+            }
+        }
     }
 
     /** Regenerates invite code for the group, returns new code on success (PARENT-only). */

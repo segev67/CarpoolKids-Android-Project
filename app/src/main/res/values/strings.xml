@@ -101,4 +101,12 @@
     <string name="status_approved">APPROVED</string>
     <string name="status_declined">DECLINED</string>
     <string name="status_blocked">BLOCKED</string>
+    <!-- Join Requests screen (Phase 4) -->
+    <string name="btn_approve">Approve</string>
+    <string name="btn_decline">Decline</string>
+    <string name="btn_block">Block</string>
+    <string name="btn_unblock">Unblock</string>
+    <string name="join_requests_empty">No join requests.</string>
+    <string name="blocked_users_empty">No blocked users.</string>
+    <string name="join_request_requester_unknown">User</string>
 </resources>

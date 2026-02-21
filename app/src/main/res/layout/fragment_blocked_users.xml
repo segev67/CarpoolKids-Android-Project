@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/dashboard_background"
+    android:padding="@dimen/dashboard_screen_padding">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/blocked_users_title"
+            style="@style/TextAppearance.Dashboard.SectionLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/group_hub_blocked_users" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/blocked_users_empty"
+            style="@style/TextAppearance.Home.TeamSubtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_md"
+            android:gravity="center"
+            android:text="@string/blocked_users_empty"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/blocked_users_list"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="@dimen/spacing_sm"
+            android:nestedScrollingEnabled="false"
+            android:visibility="gone"
+            tools:listitem="@layout/item_blocked_user"
+            tools:visibility="visible" />
+    </LinearLayout>
+</FrameLayout>

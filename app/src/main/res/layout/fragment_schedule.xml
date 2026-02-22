@@ -63,6 +63,14 @@
                 app:iconSize="24dp" />
         </LinearLayout>
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/schedule_add_practice"
+            style="@style/Widget.CarpoolKids.Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_lg"
+            android:text="@string/add_practice_title" />
+
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/schedule_empty"
             android:layout_width="match_parent"

@@ -13,7 +13,9 @@ sealed class ScheduleListItem {
     data class PracticeItem(val practice: Practice) : ScheduleListItem()
 }
 
-class ScheduleListAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+class ScheduleListAdapter(
+    private val onPracticeClick: ((Practice) -> Unit)? = null
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private val items = mutableListOf<ScheduleListItem>()
 
@@ -46,7 +48,7 @@ class ScheduleListAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             }
             else -> {
                 val binding = ItemSchedulePracticeBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-                PracticeViewHolder(binding)
+                PracticeViewHolder(binding, onPracticeClick)
             }
         }
 
@@ -63,9 +65,13 @@ class ScheduleListAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         }
     }
 
-    class PracticeViewHolder(private val binding: ItemSchedulePracticeBinding) : RecyclerView.ViewHolder(binding.root) {
+    class PracticeViewHolder(
+        private val binding: ItemSchedulePracticeBinding,
+        private val onPracticeClick: ((Practice) -> Unit)?
+    ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(practice: Practice) {
+            binding.root.setOnClickListener { onPracticeClick?.invoke(practice) }
             binding.schedulePracticeDay.text = formatDayOfWeek(practice.dateMillis)
             binding.schedulePracticeDate.text = formatDate(practice.dateMillis)
             binding.schedulePracticeTime.text = binding.root.context.getString(

@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.commit
 import androidx.recyclerview.widget.LinearLayoutManager
 import dev.segev.carpoolkids.data.PracticeRepository
 import dev.segev.carpoolkids.databinding.FragmentScheduleBinding
@@ -21,7 +22,7 @@ class ScheduleFragment : Fragment() {
     private var _binding: FragmentScheduleBinding? = null
     private val binding get() = _binding!!
 
-    private val adapter = ScheduleListAdapter()
+    private lateinit var adapter: ScheduleListAdapter
 
     /** Sunday 00:00:00 of the currently displayed week (in local timezone). */
     private var weekStartMillis: Long = 0L
@@ -38,7 +39,18 @@ class ScheduleFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val groupId = arguments?.getString(ARG_GROUP_ID).orEmpty()
+        val role = arguments?.getString(ARG_ROLE).orEmpty()
 
+        adapter = ScheduleListAdapter(onPracticeClick = { practice ->
+            parentFragmentManager.commit {
+                replace(
+                    R.id.dashboard_fragment_container,
+                    PracticeDetailFragment.newInstance(practice.id, groupId, role),
+                    "practice_detail"
+                )
+                addToBackStack("practice_detail")
+            }
+        })
         binding.scheduleList.layoutManager = LinearLayoutManager(requireContext())
         binding.scheduleList.adapter = adapter
 
@@ -57,7 +69,22 @@ class ScheduleFragment : Fragment() {
             loadPractices(groupId)
         }
 
-        loadPractices(groupId)
+        binding.scheduleAddPractice.setOnClickListener {
+            parentFragmentManager.commit {
+                replace(
+                    R.id.dashboard_fragment_container,
+                    AddPracticeFragment.newInstance(groupId, role, weekStartMillis),
+                    "add_practice"
+                )
+                addToBackStack("add_practice")
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val groupId = arguments?.getString(ARG_GROUP_ID).orEmpty()
+        if (groupId.isNotEmpty()) loadPractices(groupId)
     }
 
     override fun onDestroyView() {

@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/dashboard_background"
+    android:fillViewport="true"
+    android:padding="@dimen/dashboard_screen_padding">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/practice_detail_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/practice_detail_title"
+            android:textSize="@dimen/text_title_size"
+            android:textColor="@color/dashboard_text_primary"
+            android:textStyle="bold" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/practice_detail_day_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_lg"
+            android:text="@string/practice_detail_day"
+            android:textSize="@dimen/text_section_label_size"
+            android:textColor="@color/dashboard_text_secondary" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/practice_detail_day"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="@dimen/text_card_time_size"
+            android:textColor="@color/dashboard_text_primary"
+            android:maxLines="1"
+            android:ellipsize="end"
+            tools:text="Tue" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/practice_detail_date_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_sm"
+            android:text="@string/practice_detail_date"
+            android:textSize="@dimen/text_section_label_size"
+            android:textColor="@color/dashboard_text_secondary" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/practice_detail_date"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="@dimen/text_card_time_size"
+            android:textColor="@color/dashboard_text_primary"
+            android:maxLines="1"
+            android:ellipsize="end"
+            tools:text="11 Feb" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/practice_detail_start_time_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_lg"
+            android:text="@string/practice_detail_start_time"
+            android:textSize="@dimen/text_section_label_size"
+            android:textColor="@color/dashboard_text_secondary" />
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/practice_detail_start_time"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="@dimen/button_min_height"
+            android:padding="@dimen/card_padding"
+            android:background="@color/dashboard_card_background"
+            android:inputType="time"
+            android:textSize="@dimen/text_card_time_size"
+            android:textColor="@color/dashboard_text_primary"
+            android:textColorHint="@color/dashboard_text_secondary"
+            android:maxLines="1"
+            android:hint="@string/practice_detail_hint_start_time"
+            android:imeOptions="actionNext" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/practice_detail_end_time_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_sm"
+            android:text="@string/practice_detail_end_time"
+            android:textSize="@dimen/text_section_label_size"
+            android:textColor="@color/dashboard_text_secondary" />
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/practice_detail_end_time"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="@dimen/button_min_height"
+            android:padding="@dimen/card_padding"
+            android:background="@color/dashboard_card_background"
+            android:inputType="time"
+            android:textSize="@dimen/text_card_time_size"
+            android:textColor="@color/dashboard_text_primary"
+            android:textColorHint="@color/dashboard_text_secondary"
+            android:maxLines="1"
+            android:hint="@string/practice_detail_hint_end_time"
+            android:imeOptions="actionNext" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/practice_detail_location_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_sm"
+            android:text="@string/practice_detail_location"
+            android:textSize="@dimen/text_section_label_size"
+            android:textColor="@color/dashboard_text_secondary" />
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/practice_detail_location"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="@dimen/button_min_height"
+            android:padding="@dimen/card_padding"
+            android:background="@color/dashboard_card_background"
+            android:inputType="text"
+            android:textSize="@dimen/text_card_time_size"
+            android:textColor="@color/dashboard_text_primary"
+            android:textColorHint="@color/dashboard_text_secondary"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:hint="@string/practice_detail_hint_location"
+            android:imeOptions="actionNext" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/practice_detail_driver_to_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_lg"
+            android:text="@string/practice_detail_driver_to"
+            android:textSize="@dimen/text_section_label_size"
+            android:textColor="@color/dashboard_text_secondary" />
+
+        <Spinner
+            android:id="@+id/practice_detail_driver_to"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="@dimen/button_min_height" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/practice_detail_driver_from_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_sm"
+            android:text="@string/practice_detail_driver_from"
+            android:textSize="@dimen/text_section_label_size"
+            android:textColor="@color/dashboard_text_secondary" />
+
+        <Spinner
+            android:id="@+id/practice_detail_driver_from"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="@dimen/button_min_height" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/practice_detail_save"
+            style="@style/Widget.CarpoolKids.Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_section"
+            android:text="@string/btn_save" />
+    </LinearLayout>
+</ScrollView>

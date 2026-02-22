@@ -87,6 +87,26 @@
     <string name="schedule_week_format_with_year">%1$d – %2$d %3$s %4$d</string>
     <string name="schedule_week_prev">Previous week</string>
     <string name="schedule_week_next">Next week</string>
+    <!-- Practice detail (edit) -->
+    <string name="practice_detail_title">Practice</string>
+    <string name="practice_detail_day">Day</string>
+    <string name="practice_detail_date">Date</string>
+    <string name="practice_detail_start_time">Start time</string>
+    <string name="practice_detail_end_time">End time</string>
+    <string name="practice_detail_location">Location</string>
+    <string name="practice_detail_driver_to">Driver to</string>
+    <string name="practice_detail_driver_from">Driver from</string>
+    <string name="btn_save">Save</string>
+    <string name="practice_saved">Practice updated</string>
+    <string name="practice_load_error">Could not load practice.</string>
+    <string name="practice_detail_hint_start_time">17:00</string>
+    <string name="practice_detail_hint_end_time">18:30</string>
+    <string name="practice_detail_hint_location">Main Gym</string>
+    <!-- Add practice -->
+    <string name="add_practice_title">Add practice</string>
+    <string name="add_practice_date">Date</string>
+    <string name="add_practice_created">Practice added</string>
+    <string name="add_practice_enter_times">Enter start and end time.</string>
     <string name="dashboard_group_title">Group details</string>
     <string name="dashboard_drivers_requests_title">Drivers requests</string>
     <!-- Group tab hub -->

@@ -11,7 +11,10 @@ import java.util.Calendar
 
 class DriveRequestListAdapter(
     private var requesterNames: Map<String, String> = emptyMap(),
-    private var practiceMap: Map<String, Practice> = emptyMap()
+    private var practiceMap: Map<String, Practice> = emptyMap(),
+    private var isParent: Boolean = false,
+    private val onAcceptClick: (DriveRequest) -> Unit = {},
+    private val onDeclineClick: (DriveRequest) -> Unit = {}
 ) : RecyclerView.Adapter<DriveRequestListAdapter.ViewHolder>() {
 
     private val items = mutableListOf<DriveRequest>()
@@ -49,7 +52,7 @@ class DriveRequestListAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(items[position], requesterNames, practiceMap)
+        holder.bind(items[position], requesterNames, practiceMap, isParent, onAcceptClick, onDeclineClick)
     }
 
     override fun getItemCount(): Int = items.size
@@ -59,7 +62,10 @@ class DriveRequestListAdapter(
         fun bind(
             request: DriveRequest,
             requesterNames: Map<String, String>,
-            practiceMap: Map<String, Practice>
+            practiceMap: Map<String, Practice>,
+            isParent: Boolean,
+            onAcceptClick: (DriveRequest) -> Unit,
+            onDeclineClick: (DriveRequest) -> Unit
         ) {
             val requesterLabel = requesterNames[request.requesterUid]
                 ?: binding.root.context.getString(dev.segev.carpoolkids.R.string.join_request_requester_unknown)
@@ -73,6 +79,7 @@ class DriveRequestListAdapter(
                 if (request.direction == DriveRequest.DIRECTION_TO) dev.segev.carpoolkids.R.string.drive_request_direction_to_practice
                 else dev.segev.carpoolkids.R.string.drive_request_direction_from_practice
             )
+            @Suppress("StringFormatInvalid")
             binding.itemDriveRequestPracticeDate.text = binding.root.context.getString(
                 dev.segev.carpoolkids.R.string.drive_request_date_direction,
                 dateStr,
@@ -90,10 +97,10 @@ class DriveRequestListAdapter(
                 else -> request.status
             }
 
-            val showActions = request.status == DriveRequest.STATUS_PENDING
+            val showActions = request.status == DriveRequest.STATUS_PENDING && isParent
             binding.itemDriveRequestActions.visibility = if (showActions) View.VISIBLE else View.GONE
-            binding.itemDriveRequestAccept.setOnClickListener { /* Phase 3 */ }
-            binding.itemDriveRequestDecline.setOnClickListener { /* Phase 3 */ }
+            binding.itemDriveRequestAccept.setOnClickListener { if (showActions) onAcceptClick(request) }
+            binding.itemDriveRequestDecline.setOnClickListener { if (showActions) onDeclineClick(request) }
         }
 
         private fun formatPracticeDateLong(dateMillis: Long): String {

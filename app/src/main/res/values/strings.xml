@@ -125,7 +125,10 @@
     <string name="drive_request_dialog_title">Request a drive</string>
     <string name="drive_request_accept">Accept</string>
     <string name="drive_request_decline">Decline</string>
-    <string name="drive_request_date_direction">%1$s · %2$s</string>
+    <string name="drive_request_slot_taken_else">This slot was just taken by someone else.</string>
+    <string name="drive_request_approved">You are now driving for this slot.</string>
+    <string name="drive_request_declined">Request declined.</string>
+    <string name="drive_request_date_direction">%1$s - %2$s</string>
     <string name="drive_request_direction_to_practice">TO practice</string>
     <string name="drive_request_direction_from_practice">FROM practice</string>
     <!-- Group tab hub -->

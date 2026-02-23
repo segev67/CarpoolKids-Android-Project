@@ -45,6 +45,14 @@ object DriveRequestRepository {
         }
     }
 
+    fun acceptDriveRequest(request: DriveRequest, acceptedByUid: String, callback: (Boolean, String?) -> Unit) {
+        FirestoreManager.getInstance().acceptDriveRequest(request, acceptedByUid, callback)
+    }
+
+    fun declineDriveRequest(request: DriveRequest, declinedByUid: String, callback: (Boolean, String?) -> Unit) {
+        FirestoreManager.getInstance().declineDriveRequest(request, declinedByUid, callback)
+    }
+
     /** Real-time listener for drive requests of a group. Remove the returned registration in onDestroyView. */
     fun listenToDriveRequestsForGroup(groupId: String, callback: (List<DriveRequest>) -> Unit): ListenerRegistration =
         FirestoreManager.getInstance().listenToDriveRequestsForGroup(groupId, callback)

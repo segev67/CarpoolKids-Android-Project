@@ -6,6 +6,7 @@ import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Transaction
 import dev.segev.carpoolkids.model.DriveRequest
 import dev.segev.carpoolkids.model.Group
 import dev.segev.carpoolkids.model.JoinRequest
@@ -627,6 +628,66 @@ class FirestoreManager private constructor(context: Context) {
             .addOnFailureListener { callback(null) }
     }
 
+    /**
+     * Accept a PENDING drive request (parent only). Uses a transaction: if slot is still free and request
+     * still PENDING, sets practice driver and request status to APPROVED. First parent to commit wins.
+     */
+    fun acceptDriveRequest(
+        request: DriveRequest,
+        acceptedByUid: String,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        val practiceRef = db.collection(Constants.Firestore.COLLECTION_PRACTICES).document(request.practiceId)
+        val requestRef = db.collection(Constants.Firestore.COLLECTION_DRIVE_REQUESTS).document(request.id)
+        db.runTransaction { transaction: Transaction ->
+            val practiceSnap = transaction.get(practiceRef)
+            val requestSnap = transaction.get(requestRef)
+            val reqStatus = requestSnap.getString("status") ?: ""
+            val driverTo = practiceSnap.getString("driverToUid")?.takeIf { it.isNotEmpty() }
+            val driverFrom = practiceSnap.getString("driverFromUid")?.takeIf { it.isNotEmpty() }
+            val slotTaken = when (request.direction) {
+                DriveRequest.DIRECTION_TO -> !driverTo.isNullOrEmpty()
+                DriveRequest.DIRECTION_FROM -> !driverFrom.isNullOrEmpty()
+                else -> true
+            }
+            if (reqStatus != DriveRequest.STATUS_PENDING || slotTaken) {
+                throw RuntimeException("Slot already taken or request no longer pending")
+            }
+            when (request.direction) {
+                DriveRequest.DIRECTION_TO -> transaction.update(practiceRef, "driverToUid", acceptedByUid)
+                DriveRequest.DIRECTION_FROM -> transaction.update(practiceRef, "driverFromUid", acceptedByUid)
+            }
+            transaction.update(
+                requestRef,
+                "status", DriveRequest.STATUS_APPROVED,
+                "acceptedByUid", acceptedByUid
+            )
+        }
+            .addOnSuccessListener { callback(true, null) }
+            .addOnFailureListener { e ->
+                val msg = e.message ?: "Failed to accept"
+                callback(false, if (msg.contains("Slot already taken") || msg.contains("no longer pending")) msg else msg)
+            }
+    }
+
+    /** Decline a PENDING drive request (parent only). Sets status to DECLINED and declinedByUid. */
+    fun declineDriveRequest(
+        request: DriveRequest,
+        declinedByUid: String,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        db.collection(Constants.Firestore.COLLECTION_DRIVE_REQUESTS)
+            .document(request.id)
+            .update(
+                mapOf(
+                    "status" to DriveRequest.STATUS_DECLINED,
+                    "declinedByUid" to declinedByUid
+                )
+            )
+            .addOnSuccessListener { callback(true, null) }
+            .addOnFailureListener { e -> callback(false, e.message ?: "Failed to decline") }
+    }
+
     /** Real-time listener for drive requests of a group. All group members see the same list. */
     fun listenToDriveRequestsForGroup(groupId: String, callback: (List<DriveRequest>) -> Unit): ListenerRegistration {
         if (groupId.isBlank()) {
@@ -657,6 +718,7 @@ class FirestoreManager private constructor(context: Context) {
         val requesterUid = doc.getString("requesterUid") ?: return null
         val status = doc.getString("status") ?: return null
         val acceptedByUid = doc.getString("acceptedByUid")?.takeIf { it.isNotEmpty() }
+        val declinedByUid = doc.getString("declinedByUid")?.takeIf { it.isNotEmpty() }
         val createdAt = doc.getTimestamp("createdAt")?.toDate()?.time
         return DriveRequest(
             id,
@@ -667,6 +729,7 @@ class FirestoreManager private constructor(context: Context) {
             requesterUid,
             status,
             acceptedByUid,
+            declinedByUid,
             createdAt
         )
     }

@@ -15,6 +15,8 @@ data class DriveRequest(
     val requesterUid: String,
     val status: String,
     val acceptedByUid: String? = null,
+    /** Set when a parent declines; used for "Declined by [name]" in the tab. */
+    val declinedByUid: String? = null,
     val createdAt: Long? = null
 ) {
     companion object {

@@ -17,6 +17,7 @@ import dev.segev.carpoolkids.databinding.FragmentDriveRequestsBinding
 import dev.segev.carpoolkids.model.DriveRequest
 import dev.segev.carpoolkids.model.Practice
 import dev.segev.carpoolkids.ui.drive.DriveRequestListAdapter
+import dev.segev.carpoolkids.utilities.Constants
 import java.util.Calendar
 import java.util.UUID
 
@@ -44,13 +45,59 @@ class DriversRequestsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val groupId = arguments?.getString(ARG_GROUP_ID).orEmpty()
+        val role = arguments?.getString(ARG_ROLE).orEmpty()
+        val isParent = role == Constants.UserRole.PARENT
 
-        adapter = DriveRequestListAdapter(requesterNames = emptyMap())
+        adapter = DriveRequestListAdapter(
+            requesterNames = emptyMap(),
+            practiceMap = emptyMap(),
+            isParent = isParent,
+            onAcceptClick = { request -> onAcceptRequest(request) },
+            onDeclineClick = { request -> onDeclineRequest(request) }
+        )
         binding.driveRequestsList.layoutManager = LinearLayoutManager(requireContext())
         binding.driveRequestsList.adapter = adapter
 
         binding.driveRequestsRequestBtn.setOnClickListener { openRequestDriveDialog(groupId) }
         attachListener(groupId)
+    }
+
+    private fun onAcceptRequest(request: DriveRequest) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        if (uid.isNullOrBlank()) {
+            Snackbar.make(binding.root, getString(R.string.create_join_error), Snackbar.LENGTH_SHORT).show()
+            return
+        }
+        DriveRequestRepository.acceptDriveRequest(request, uid) { success, err ->
+            if (_binding == null) return@acceptDriveRequest
+            if (success) {
+                Snackbar.make(binding.root, getString(R.string.drive_request_approved), Snackbar.LENGTH_SHORT).show()
+            } else {
+                val msg = when {
+                    err?.contains("Slot already taken", ignoreCase = true) == true ||
+                    err?.contains("no longer pending", ignoreCase = true) == true ->
+                        getString(R.string.drive_request_slot_taken_else)
+                    else -> err ?: getString(R.string.create_join_error)
+                }
+                Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun onDeclineRequest(request: DriveRequest) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        if (uid.isNullOrBlank()) {
+            Snackbar.make(binding.root, getString(R.string.create_join_error), Snackbar.LENGTH_SHORT).show()
+            return
+        }
+        DriveRequestRepository.declineDriveRequest(request, uid) { success, err ->
+            if (_binding == null) return@declineDriveRequest
+            if (success) {
+                Snackbar.make(binding.root, getString(R.string.drive_request_declined), Snackbar.LENGTH_SHORT).show()
+            } else {
+                Snackbar.make(binding.root, err ?: getString(R.string.create_join_error), Snackbar.LENGTH_LONG).show()
+            }
+        }
     }
 
     override fun onDestroyView() {

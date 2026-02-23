@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     style="@style/Widget.CarpoolKids.CardView.Dashboard"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -15,44 +14,108 @@
         android:orientation="vertical"
         android:padding="@dimen/card_padding">
 
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/item_drive_request_practice_date"
-            style="@style/TextAppearance.Home.TeamName"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            tools:text="Mon, 10 Feb" />
-
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/item_drive_request_direction"
-            style="@style/TextAppearance.Home.TeamSubtitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/spacing_xs"
-            tools:text="TO practice" />
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/spacing_sm"
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/item_drive_request_requester"
-                style="@style/TextAppearance.Home.TeamSubtitle"
+                style="@style/TextAppearance.Home.TeamName"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:maxLines="1"
-                android:ellipsize="end"
-                tools:text="Requested by User" />
+                android:ellipsize="end" />
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/item_drive_request_status"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/item_drive_request_practice_date"
+            style="@style/TextAppearance.Home.TeamSubtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_xs" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_xs"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_clock"
+                android:scaleType="fitCenter"
+                android:contentDescription="@null"
+                app:tint="@color/dashboard_text_secondary" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/item_drive_request_time"
+                style="@style/TextAppearance.Home.TeamSubtitle"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                tools:text="Open" />
+                android:layout_marginStart="@dimen/spacing_xs" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_xs"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_location"
+                android:scaleType="fitCenter"
+                android:contentDescription="@null"
+                app:tint="@color/dashboard_text_secondary" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/item_drive_request_location"
+                style="@style/TextAppearance.Home.TeamSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/spacing_xs"
+                android:maxLines="2"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/item_drive_request_actions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_sm"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/item_drive_request_accept"
+                style="@style/Widget.CarpoolKids.Button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="@dimen/spacing_xs"
+                android:text="@string/drive_request_accept" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/item_drive_request_decline"
+                style="@style/Widget.CarpoolKids.Button.Outlined"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="@dimen/spacing_xs"
+                android:text="@string/drive_request_decline" />
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

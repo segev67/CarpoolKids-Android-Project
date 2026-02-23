@@ -29,6 +29,14 @@
         <item name="backgroundTint">@color/button_primary_blue</item>
         <item name="android:minHeight">@dimen/button_min_height</item>
     </style>
+    <style name="Widget.CarpoolKids.Button.Outlined" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textSize">16sp</item>
+        <item name="strokeColor">@color/button_primary_blue</item>
+        <item name="android:textColor">@color/button_primary_blue</item>
+        <item name="android:minHeight">@dimen/button_min_height</item>
+    </style>
 
     <!-- Home: section title (e.g. My Teams, Today's Training) -->
     <style name="TextAppearance.Home.SectionTitle" parent="TextAppearance.MaterialComponents.Headline6">

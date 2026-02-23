@@ -7,13 +7,17 @@ import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import androidx.fragment.app.Fragment
 import com.google.android.material.snackbar.Snackbar
+import com.google.firebase.auth.FirebaseAuth
+import dev.segev.carpoolkids.data.DriveRequestRepository
 import dev.segev.carpoolkids.data.GroupRepository
 import dev.segev.carpoolkids.data.PracticeRepository
 import dev.segev.carpoolkids.data.UserRepository
 import dev.segev.carpoolkids.databinding.FragmentPracticeDetailBinding
+import dev.segev.carpoolkids.model.DriveRequest
 import dev.segev.carpoolkids.model.Practice
 import dev.segev.carpoolkids.utilities.Constants
 import java.util.Calendar
+import java.util.UUID
 
 /**
  * Practice detail screen: view and edit start/end time, location, driver TO, driver FROM.
@@ -49,6 +53,8 @@ class PracticeDetailFragment : Fragment() {
         }
 
         binding.practiceDetailSave.setOnClickListener { save(groupId) }
+        binding.practiceDetailRequestTo.setOnClickListener { requestDrive(groupId, DriveRequest.DIRECTION_TO) }
+        binding.practiceDetailRequestFrom.setOnClickListener { requestDrive(groupId, DriveRequest.DIRECTION_FROM) }
 
         PracticeRepository.getPracticeById(practiceId) { p, error ->
             if (_binding == null) return@getPracticeById
@@ -74,6 +80,50 @@ class PracticeDetailFragment : Fragment() {
         binding.practiceDetailStartTime.setText(p.startTime)
         binding.practiceDetailEndTime.setText(p.endTime)
         binding.practiceDetailLocation.setText(p.location)
+        binding.practiceDetailRequestTo.visibility = if (p.driverToUid.isNullOrBlank()) View.VISIBLE else View.GONE
+        binding.practiceDetailRequestFrom.visibility = if (p.driverFromUid.isNullOrBlank()) View.VISIBLE else View.GONE
+    }
+
+    private fun requestDrive(groupId: String, direction: String) {
+        val p = practice ?: return
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        if (uid.isNullOrBlank()) {
+            Snackbar.make(binding.root, getString(R.string.create_join_error), Snackbar.LENGTH_SHORT).show()
+            return
+        }
+        DriveRequestRepository.canCreateDriveRequest(groupId, p.id, direction) { canCreate, errorMessage ->
+            if (_binding == null) return@canCreateDriveRequest
+            if (!canCreate) {
+                val msg = when (errorMessage) {
+                    "Slot already taken" -> getString(R.string.drive_request_slot_taken)
+                    "A request is already open for this" -> getString(R.string.drive_request_already_open)
+                    else -> errorMessage ?: getString(R.string.create_join_error)
+                }
+                Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).show()
+                return@canCreateDriveRequest
+            }
+            val request = DriveRequest(
+                id = UUID.randomUUID().toString(),
+                groupId = groupId,
+                practiceId = p.id,
+                practiceDateMillis = p.dateMillis,
+                direction = direction,
+                requesterUid = uid,
+                status = DriveRequest.STATUS_PENDING,
+                acceptedByUid = null,
+                createdAt = null
+            )
+            DriveRequestRepository.createDriveRequest(request) { success, err ->
+                if (_binding == null) return@createDriveRequest
+                if (success) {
+                    Snackbar.make(binding.root, getString(R.string.drive_request_created), Snackbar.LENGTH_SHORT).show()
+                    binding.practiceDetailRequestTo.visibility = if (direction == DriveRequest.DIRECTION_TO) View.GONE else binding.practiceDetailRequestTo.visibility
+                    binding.practiceDetailRequestFrom.visibility = if (direction == DriveRequest.DIRECTION_FROM) View.GONE else binding.practiceDetailRequestFrom.visibility
+                } else {
+                    Snackbar.make(binding.root, err ?: getString(R.string.create_join_error), Snackbar.LENGTH_LONG).show()
+                }
+            }
+        }
     }
 
     private fun loadParentsForSpinners(groupId: String, p: Practice) {

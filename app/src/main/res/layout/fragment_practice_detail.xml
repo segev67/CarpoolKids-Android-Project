@@ -164,6 +164,24 @@
             android:minHeight="@dimen/button_min_height" />
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/practice_detail_request_to"
+            style="@style/Widget.CarpoolKids.Button.Outlined"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_lg"
+            android:text="@string/drive_request_request_to"
+            android:visibility="gone" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/practice_detail_request_from"
+            style="@style/Widget.CarpoolKids.Button.Outlined"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_sm"
+            android:text="@string/drive_request_request_from"
+            android:visibility="gone" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/practice_detail_save"
             style="@style/Widget.CarpoolKids.Button"
             android:layout_width="match_parent"

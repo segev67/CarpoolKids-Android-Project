@@ -112,8 +112,22 @@
     <string name="add_practice_no_team">You need to join or create a team before adding practices.</string>
     <string name="dashboard_group_title">Group details</string>
     <string name="dashboard_drivers_requests_title">Drive requests</string>
+    <string name="drive_requests_subtitle">Coordinate transportation</string>
+    <string name="drive_request_request_parent_to_drive">Request parent to drive</string>
     <string name="drive_requests_empty">No drive requests yet.</string>
     <string name="drive_request_requested_by">Requested by %1$s</string>
+    <string name="drive_request_slot_taken">This slot is already taken.</string>
+    <string name="drive_request_already_open">A request is already open for this.</string>
+    <string name="drive_request_created">Drive request sent.</string>
+    <string name="drive_request_request_to">Request TO</string>
+    <string name="drive_request_request_from">Request FROM</string>
+    <string name="drive_requests_no_practices">No practices yet. Add a practice in Schedule first.</string>
+    <string name="drive_request_dialog_title">Request a drive</string>
+    <string name="drive_request_accept">Accept</string>
+    <string name="drive_request_decline">Decline</string>
+    <string name="drive_request_date_direction">%1$s · %2$s</string>
+    <string name="drive_request_direction_to_practice">TO practice</string>
+    <string name="drive_request_direction_from_practice">FROM practice</string>
     <!-- Group tab hub -->
     <string name="carpool_header_format">Carpool: %s</string>
     <string name="group_hub_header_no_group">No active group</string>

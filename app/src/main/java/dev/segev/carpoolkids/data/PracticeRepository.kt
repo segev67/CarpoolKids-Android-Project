@@ -36,6 +36,10 @@ object PracticeRepository {
         FirestoreManager.getInstance().getPracticeById(practiceId, callback)
     }
 
+    fun getPracticesByIds(ids: List<String>, callback: (Map<String, Practice>) -> Unit) {
+        FirestoreManager.getInstance().getPracticesByIds(ids, callback)
+    }
+
     fun createPractice(
         groupId: String,
         dateMillis: Long,

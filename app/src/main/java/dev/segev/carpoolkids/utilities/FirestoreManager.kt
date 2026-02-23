@@ -13,6 +13,7 @@ import dev.segev.carpoolkids.model.Practice
 import dev.segev.carpoolkids.model.UserProfile
 import java.lang.ref.WeakReference
 import java.util.Date
+import java.util.concurrent.atomic.AtomicInteger
 
 class FirestoreManager private constructor(context: Context) {
     private val contextRef = WeakReference(context)
@@ -432,6 +433,31 @@ class FirestoreManager private constructor(context: Context) {
     }
 
     /**
+     * Fetches multiple practices by ID. Returns a map practiceId -> Practice for found documents.
+     */
+    fun getPracticesByIds(ids: List<String>, callback: (Map<String, Practice>) -> Unit) {
+        val distinct = ids.distinct().take(30)
+        if (distinct.isEmpty()) {
+            callback(emptyMap())
+            return
+        }
+        val result = mutableMapOf<String, Practice>()
+        val pending = AtomicInteger(distinct.size)
+        for (id in distinct) {
+            db.collection(Constants.Firestore.COLLECTION_PRACTICES)
+                .document(id)
+                .get()
+                .addOnSuccessListener { doc ->
+                    documentToPractice(doc)?.let { result[it.id] = it }
+                    if (pending.decrementAndGet() == 0) callback(result)
+                }
+                .addOnFailureListener {
+                    if (pending.decrementAndGet() == 0) callback(result)
+                }
+        }
+    }
+
+    /**
      * Practices for a group in a date range (inclusive). Use week start/end day at midnight.
      * Results ordered by date; caller may sort by startTime per day.
      */
@@ -571,6 +597,34 @@ class FirestoreManager private constructor(context: Context) {
             .set(data)
             .addOnSuccessListener { callback(true, null) }
             .addOnFailureListener { e -> callback(false, e.message ?: "Failed to create drive request") }
+    }
+
+    /**
+     * Check if there is a PENDING drive request for the given (groupId, practiceId, direction).
+     * Used to enforce one pending request per (practice, direction).
+     */
+    fun getPendingDriveRequest(
+        groupId: String,
+        practiceId: String,
+        direction: String,
+        callback: (DriveRequest?) -> Unit
+    ) {
+        if (groupId.isBlank() || practiceId.isBlank() || direction.isBlank()) {
+            callback(null)
+            return
+        }
+        db.collection(Constants.Firestore.COLLECTION_DRIVE_REQUESTS)
+            .whereEqualTo("groupId", groupId)
+            .whereEqualTo("practiceId", practiceId)
+            .whereEqualTo("direction", direction)
+            .whereEqualTo("status", DriveRequest.STATUS_PENDING)
+            .limit(1)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val doc = snapshot?.documents?.firstOrNull()
+                callback(doc?.let { documentToDriveRequest(it) })
+            }
+            .addOnFailureListener { callback(null) }
     }
 
     /** Real-time listener for drive requests of a group. All group members see the same list. */

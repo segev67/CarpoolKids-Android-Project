@@ -111,7 +111,9 @@
     <string name="add_practice_enter_times">Enter start and end time.</string>
     <string name="add_practice_no_team">You need to join or create a team before adding practices.</string>
     <string name="dashboard_group_title">Group details</string>
-    <string name="dashboard_drivers_requests_title">Drivers requests</string>
+    <string name="dashboard_drivers_requests_title">Drive requests</string>
+    <string name="drive_requests_empty">No drive requests yet.</string>
+    <string name="drive_request_requested_by">Requested by %1$s</string>
     <!-- Group tab hub -->
     <string name="carpool_header_format">Carpool: %s</string>
     <string name="group_hub_header_no_group">No active group</string>

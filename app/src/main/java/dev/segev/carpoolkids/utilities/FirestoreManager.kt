@@ -6,6 +6,7 @@ import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import dev.segev.carpoolkids.model.DriveRequest
 import dev.segev.carpoolkids.model.Group
 import dev.segev.carpoolkids.model.JoinRequest
 import dev.segev.carpoolkids.model.Practice
@@ -547,6 +548,71 @@ class FirestoreManager private constructor(context: Context) {
             driverToUid,
             driverFromUid,
             createdBy,
+            createdAt
+        )
+    }
+
+    // ---------- Drive requests (Drive requests tab) ----------
+
+    fun createDriveRequest(request: DriveRequest, callback: (Boolean, String?) -> Unit) {
+        val data = hashMapOf(
+            "id" to request.id,
+            "groupId" to request.groupId,
+            "practiceId" to request.practiceId,
+            "practiceDateMillis" to request.practiceDateMillis,
+            "direction" to request.direction,
+            "requesterUid" to request.requesterUid,
+            "status" to request.status,
+            "createdAt" to FieldValue.serverTimestamp()
+        )
+        if (request.acceptedByUid != null) data["acceptedByUid"] = request.acceptedByUid
+        db.collection(Constants.Firestore.COLLECTION_DRIVE_REQUESTS)
+            .document(request.id)
+            .set(data)
+            .addOnSuccessListener { callback(true, null) }
+            .addOnFailureListener { e -> callback(false, e.message ?: "Failed to create drive request") }
+    }
+
+    /** Real-time listener for drive requests of a group. All group members see the same list. */
+    fun listenToDriveRequestsForGroup(groupId: String, callback: (List<DriveRequest>) -> Unit): ListenerRegistration {
+        if (groupId.isBlank()) {
+            callback(emptyList())
+            return ListenerRegistration { }
+        }
+        return db.collection(Constants.Firestore.COLLECTION_DRIVE_REQUESTS)
+            .whereEqualTo("groupId", groupId)
+            .limit(100)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    android.util.Log.w("FirestoreManager", "listenToDriveRequestsForGroup failed: ${e.message}", e)
+                    callback(emptyList())
+                    return@addSnapshotListener
+                }
+                val list = snapshot?.documents?.mapNotNull { documentToDriveRequest(it) }
+                    ?.sortedWith(compareBy<DriveRequest> { it.practiceDateMillis }.thenBy { it.createdAt ?: 0L }) ?: emptyList()
+                callback(list)
+            }
+    }
+
+    private fun documentToDriveRequest(doc: com.google.firebase.firestore.DocumentSnapshot): DriveRequest? {
+        val id = doc.getString("id") ?: doc.id
+        val groupId = doc.getString("groupId") ?: return null
+        val practiceId = doc.getString("practiceId") ?: return null
+        val practiceDateMillis = (doc.get("practiceDateMillis") as? Number)?.toLong() ?: return null
+        val direction = doc.getString("direction") ?: return null
+        val requesterUid = doc.getString("requesterUid") ?: return null
+        val status = doc.getString("status") ?: return null
+        val acceptedByUid = doc.getString("acceptedByUid")?.takeIf { it.isNotEmpty() }
+        val createdAt = doc.getTimestamp("createdAt")?.toDate()?.time
+        return DriveRequest(
+            id,
+            groupId,
+            practiceId,
+            practiceDateMillis,
+            direction,
+            requesterUid,
+            status,
+            acceptedByUid,
             createdAt
         )
     }

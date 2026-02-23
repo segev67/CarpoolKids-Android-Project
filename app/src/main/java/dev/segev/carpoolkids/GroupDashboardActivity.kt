@@ -104,7 +104,11 @@ class GroupDashboardActivity : AppCompatActivity(), DashboardHomeListener {
                 }
                 R.id.nav_drive -> {
                     supportFragmentManager.commit {
-                        replace(R.id.dashboard_fragment_container, DriversRequestsFragment(), "drivers")
+                        replace(
+                            R.id.dashboard_fragment_container,
+                            DriversRequestsFragment.newInstance(currentGroupId, role.orEmpty()),
+                            "drivers"
+                        )
                     }
                     true
                 }

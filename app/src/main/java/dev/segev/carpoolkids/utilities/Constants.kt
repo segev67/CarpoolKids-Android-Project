@@ -15,6 +15,7 @@ class Constants {
         const val COLLECTION_LINK_CODES: String = "link_codes"
         const val COLLECTION_JOIN_REQUESTS: String = "join_requests"
         const val COLLECTION_PRACTICES: String = "practices"
+        const val COLLECTION_DRIVE_REQUESTS: String = "drive_requests"
     }
 
     object LinkCode {

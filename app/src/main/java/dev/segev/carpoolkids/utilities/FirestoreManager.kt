@@ -462,6 +462,38 @@ class FirestoreManager private constructor(context: Context) {
             }
     }
 
+    /**
+     * Real-time listener for practices in a group for the given week (same query as getPracticesForWeek).
+     * Callback receives sorted list and optional error; remove the returned ListenerRegistration when done.
+     */
+    fun listenToPracticesForWeek(
+        groupId: String,
+        weekStartMillis: Long,
+        weekEndMillis: Long,
+        callback: (List<Practice>, String?) -> Unit
+    ): ListenerRegistration {
+        if (groupId.isBlank()) {
+            callback(emptyList(), null)
+            return ListenerRegistration { }
+        }
+        val startTimestamp = Timestamp(Date(weekStartMillis))
+        val endTimestamp = Timestamp(Date(weekEndMillis))
+        return db.collection(Constants.Firestore.COLLECTION_PRACTICES)
+            .whereEqualTo("groupId", groupId)
+            .whereGreaterThanOrEqualTo("date", startTimestamp)
+            .whereLessThanOrEqualTo("date", endTimestamp)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    android.util.Log.w("FirestoreManager", "listenToPracticesForWeek failed: ${e.message}", e)
+                    callback(emptyList(), e.message ?: "Failed to load practices")
+                    return@addSnapshotListener
+                }
+                val list = snapshot?.documents?.mapNotNull { documentToPractice(it) }
+                    ?.sortedWith(compareBy({ it.dateMillis }, { it.startTime })) ?: emptyList()
+                callback(list, null)
+            }
+    }
+
     fun updatePractice(
         practiceId: String,
         startTime: String? = null,

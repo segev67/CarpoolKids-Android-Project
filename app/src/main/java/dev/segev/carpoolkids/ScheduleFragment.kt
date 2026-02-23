@@ -7,7 +7,9 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.firebase.firestore.ListenerRegistration
 import dev.segev.carpoolkids.data.PracticeRepository
+import dev.segev.carpoolkids.data.UserRepository
 import dev.segev.carpoolkids.databinding.FragmentScheduleBinding
 import dev.segev.carpoolkids.model.Practice
 import dev.segev.carpoolkids.ui.schedule.ScheduleListItem
@@ -15,7 +17,7 @@ import dev.segev.carpoolkids.ui.schedule.ScheduleListAdapter
 import java.util.Calendar
 
 /**
- * Schedule tab: week selector and list of practices grouped by date (read-only in Phase 2).
+ * Schedule tab: week selector and list of practices grouped by date. Real-time updates (Phase 5).
  */
 class ScheduleFragment : Fragment() {
 
@@ -26,6 +28,8 @@ class ScheduleFragment : Fragment() {
 
     /** Sunday 00:00:00 of the currently displayed week (in local timezone). */
     private var weekStartMillis: Long = 0L
+
+    private var practicesListener: ListenerRegistration? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -61,13 +65,15 @@ class ScheduleFragment : Fragment() {
         binding.scheduleWeekPrev.setOnClickListener {
             weekStartMillis -= 7 * 24 * 60 * 60 * 1000L
             updateWeekLabel()
-            loadPractices(groupId)
+            attachPracticesListener(groupId)
         }
         binding.scheduleWeekNext.setOnClickListener {
             weekStartMillis += 7 * 24 * 60 * 60 * 1000L
             updateWeekLabel()
-            loadPractices(groupId)
+            attachPracticesListener(groupId)
         }
+
+        attachPracticesListener(groupId)
 
         binding.scheduleAddPractice.setOnClickListener {
             parentFragmentManager.commit {
@@ -81,15 +87,77 @@ class ScheduleFragment : Fragment() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        val groupId = arguments?.getString(ARG_GROUP_ID).orEmpty()
-        if (groupId.isNotEmpty()) loadPractices(groupId)
-    }
-
     override fun onDestroyView() {
         super.onDestroyView()
+        practicesListener?.remove()
+        practicesListener = null
         _binding = null
+    }
+
+    /** Attaches a real-time listener for the current week; removes any previous listener. */
+    private fun attachPracticesListener(groupId: String) {
+        practicesListener?.remove()
+        practicesListener = null
+        if (groupId.isEmpty()) {
+            showEmpty()
+            return
+        }
+        showLoading()
+        val weekEndMillis = weekStartMillis + 7 * 24 * 60 * 60 * 1000L - 1
+        practicesListener = PracticeRepository.listenToPracticesForWeek(
+            groupId, weekStartMillis, weekEndMillis
+        ) { practices, error ->
+            if (_binding == null) return@listenToPracticesForWeek
+            binding.scheduleProgress.visibility = View.GONE
+            when {
+                error != null -> {
+                    binding.scheduleErrorMessage.text = getString(R.string.schedule_load_error)
+                    binding.scheduleErrorContainer.visibility = View.VISIBLE
+                    binding.scheduleEmpty.visibility = View.GONE
+                    binding.scheduleList.visibility = View.GONE
+                    adapter.submitList(emptyList())
+                }
+                practices.isEmpty() -> showEmpty()
+                else -> {
+                    binding.scheduleErrorContainer.visibility = View.GONE
+                    binding.scheduleEmpty.visibility = View.GONE
+                    val driverUids = practices.flatMap { p ->
+                        listOfNotNull(p.driverToUid, p.driverFromUid).filter { it.isNotBlank() }
+                    }.distinct()
+                    if (driverUids.isEmpty()) {
+                        adapter.setDriverNames(emptyMap())
+                        adapter.submitList(buildListWithHeaders(practices))
+                        binding.scheduleList.visibility = View.VISIBLE
+                    } else {
+                        UserRepository.getUsersByIds(driverUids) { profileMap ->
+                            if (_binding == null) return@getUsersByIds
+                            val nameMap = profileMap.mapValues { (_, profile) ->
+                                profile.displayName?.takeIf { it.isNotBlank() }
+                                    ?: profile.email?.takeIf { it.isNotBlank() }
+                                    ?: getString(R.string.join_request_requester_unknown)
+                            }
+                            adapter.setDriverNames(nameMap)
+                            adapter.submitList(buildListWithHeaders(practices))
+                            binding.scheduleList.visibility = View.VISIBLE
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun showLoading() {
+        binding.scheduleProgress.visibility = View.VISIBLE
+        binding.scheduleEmpty.visibility = View.GONE
+        binding.scheduleErrorContainer.visibility = View.GONE
+        binding.scheduleList.visibility = View.GONE
+    }
+
+    private fun showEmpty() {
+        binding.scheduleErrorContainer.visibility = View.GONE
+        binding.scheduleEmpty.visibility = View.VISIBLE
+        binding.scheduleList.visibility = View.GONE
+        adapter.submitList(emptyList())
     }
 
     private fun updateWeekLabel() {
@@ -122,28 +190,6 @@ class ScheduleFragment : Fragment() {
         Calendar.NOVEMBER -> "Nov"
         Calendar.DECEMBER -> "Dec"
         else -> ""
-    }
-
-    private fun loadPractices(groupId: String) {
-        if (groupId.isEmpty()) {
-            binding.scheduleEmpty.visibility = View.VISIBLE
-            binding.scheduleList.visibility = View.GONE
-            adapter.submitList(emptyList())
-            return
-        }
-        val weekEndMillis = weekStartMillis + 7 * 24 * 60 * 60 * 1000L - 1
-        PracticeRepository.getPracticesForWeek(groupId, weekStartMillis, weekEndMillis) { practices, error ->
-            if (_binding == null) return@getPracticesForWeek
-            if (error != null || practices.isEmpty()) {
-                binding.scheduleEmpty.visibility = View.VISIBLE
-                binding.scheduleList.visibility = View.GONE
-                adapter.submitList(emptyList())
-                return@getPracticesForWeek
-            }
-            binding.scheduleEmpty.visibility = View.GONE
-            binding.scheduleList.visibility = View.VISIBLE
-            adapter.submitList(buildListWithHeaders(practices))
-        }
     }
 
     private fun buildListWithHeaders(practices: List<Practice>): List<ScheduleListItem> {

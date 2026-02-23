@@ -18,6 +18,16 @@ class ScheduleListAdapter(
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private val items = mutableListOf<ScheduleListItem>()
+    private var driverNames: Map<String, String> = emptyMap()
+
+    /** Sets display names for driver UIDs (uid -> name). Call before or after submitList to show names on practice rows. */
+    fun setDriverNames(names: Map<String, String>) {
+        driverNames = names
+        // Only practice rows need to rebind, headers are unchanged.
+        items.forEachIndexed { index, item ->
+            if (item is ScheduleListItem.PracticeItem) notifyItemChanged(index)
+        }
+    }
 
     companion object {
         private const val VIEW_TYPE_HEADER = 0
@@ -55,7 +65,7 @@ class ScheduleListAdapter(
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (val item = items[position]) {
             is ScheduleListItem.Header -> (holder as HeaderViewHolder).bind(item)
-            is ScheduleListItem.PracticeItem -> (holder as PracticeViewHolder).bind(item.practice)
+            is ScheduleListItem.PracticeItem -> (holder as PracticeViewHolder).bind(item.practice, driverNames)
         }
     }
 
@@ -70,7 +80,7 @@ class ScheduleListAdapter(
         private val onPracticeClick: ((Practice) -> Unit)?
     ) : RecyclerView.ViewHolder(binding.root) {
 
-        fun bind(practice: Practice) {
+        fun bind(practice: Practice, driverNames: Map<String, String>) {
             binding.root.setOnClickListener { onPracticeClick?.invoke(practice) }
             binding.schedulePracticeDay.text = formatDayOfWeek(practice.dateMillis)
             binding.schedulePracticeDate.text = formatDate(practice.dateMillis)
@@ -81,8 +91,8 @@ class ScheduleListAdapter(
             )
             binding.schedulePracticeLocation.text = practice.location.ifBlank { "-" }
             val noDriver = binding.root.context.getString(dev.segev.carpoolkids.R.string.schedule_no_driver)
-            binding.schedulePracticeToValue.text = if (!practice.driverToUid.isNullOrBlank()) "—" else noDriver
-            binding.schedulePracticeFromValue.text = if (!practice.driverFromUid.isNullOrBlank()) "—" else noDriver
+            binding.schedulePracticeToValue.text = practice.driverToUid?.takeIf { it.isNotBlank() }?.let { driverNames[it] ?: "—" } ?: noDriver
+            binding.schedulePracticeFromValue.text = practice.driverFromUid?.takeIf { it.isNotBlank() }?.let { driverNames[it] ?: "—" } ?: noDriver
         }
 
         private fun formatDayOfWeek(dateMillis: Long): String {

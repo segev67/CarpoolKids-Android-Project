@@ -77,7 +77,9 @@
     <string name="btn_create_join_group">Create/Join Group</string>
     <string name="coming_soon">Coming soon</string>
     <string name="dashboard_schedule_title">Weekly Practices</string>
-    <string name="schedule_no_practices">No practices this week.</string>
+    <string name="schedule_no_practices">No practices this week. Tap Add practice to add one.</string>
+    <string name="schedule_load_error">Could not load practices. Check your connection and try again.</string>
+    <string name="schedule_retry">Retry</string>
     <string name="schedule_to">To:</string>
     <string name="schedule_from">From:</string>
     <string name="schedule_no_driver">No driver</string>

@@ -1,5 +1,6 @@
 package dev.segev.carpoolkids.data
 
+import com.google.firebase.firestore.ListenerRegistration
 import dev.segev.carpoolkids.model.Practice
 import dev.segev.carpoolkids.utilities.FirestoreManager
 import java.util.UUID
@@ -18,6 +19,18 @@ object PracticeRepository {
     ) {
         FirestoreManager.getInstance().getPracticesForWeek(groupId, weekStartMillis, weekEndMillis, callback)
     }
+
+    /**
+     * Real-time listener for practices in a group for the given week. Remove the returned
+     * ListenerRegistration in onDestroyView (or when changing week).
+     */
+    fun listenToPracticesForWeek(
+        groupId: String,
+        weekStartMillis: Long,
+        weekEndMillis: Long,
+        callback: (List<Practice>, String?) -> Unit
+    ): ListenerRegistration =
+        FirestoreManager.getInstance().listenToPracticesForWeek(groupId, weekStartMillis, weekEndMillis, callback)
 
     fun getPracticeById(practiceId: String, callback: (Practice?, String?) -> Unit) {
         FirestoreManager.getInstance().getPracticeById(practiceId, callback)

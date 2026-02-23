@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
+import com.google.android.material.snackbar.Snackbar
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.firebase.firestore.ListenerRegistration
 import dev.segev.carpoolkids.data.PracticeRepository
@@ -76,6 +77,10 @@ class ScheduleFragment : Fragment() {
         attachPracticesListener(groupId)
 
         binding.scheduleAddPractice.setOnClickListener {
+            if (groupId.isEmpty()) {
+                Snackbar.make(binding.root, getString(R.string.add_practice_no_team), Snackbar.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
             parentFragmentManager.commit {
                 replace(
                     R.id.dashboard_fragment_container,

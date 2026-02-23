@@ -109,6 +109,7 @@
     <string name="add_practice_date">Date</string>
     <string name="add_practice_created">Practice added</string>
     <string name="add_practice_enter_times">Enter start and end time.</string>
+    <string name="add_practice_no_team">You need to join or create a team before adding practices.</string>
     <string name="dashboard_group_title">Group details</string>
     <string name="dashboard_drivers_requests_title">Drivers requests</string>
     <!-- Group tab hub -->

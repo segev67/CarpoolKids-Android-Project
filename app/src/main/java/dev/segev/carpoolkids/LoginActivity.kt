@@ -48,14 +48,14 @@ class LoginActivity : AppCompatActivity() {
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == RESULT_OK) {
-            result.data?.getStringExtra(GroupDashboardActivity.EXTRA_GROUP_ID)?.takeIf { it.isNotBlank() }?.let { groupId ->
-                startActivity(
-                    Intent(this, GroupDashboardActivity::class.java)
-                        .putExtra(GroupDashboardActivity.EXTRA_GROUP_ID, groupId)
-                        .putExtra(GroupDashboardActivity.EXTRA_ROLE, pendingRoleAfterLogin)
-                )
-                finish()
-            }
+            val groupId = result.data?.getStringExtra(GroupDashboardActivity.EXTRA_GROUP_ID).orEmpty()
+            val role = result.data?.getStringExtra(GroupDashboardActivity.EXTRA_ROLE) ?: pendingRoleAfterLogin
+            startActivity(
+                Intent(this, GroupDashboardActivity::class.java)
+                    .putExtra(GroupDashboardActivity.EXTRA_GROUP_ID, groupId)
+                    .putExtra(GroupDashboardActivity.EXTRA_ROLE, role)
+            )
+            finish()
         }
     }
 

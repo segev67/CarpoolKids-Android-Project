@@ -11,6 +11,17 @@ object DriveRequestRepository {
     }
 
     /**
+     * Returns true if the slot is free for self-declare (no driver, no PENDING request).
+     * Same validation as canCreateDriveRequest; use before updatePractice(driverToUid/driverFromUid).
+     */
+    fun canSelfDeclare(
+        groupId: String,
+        practiceId: String,
+        direction: String,
+        callback: (Boolean, String?) -> Unit
+    ) = canCreateDriveRequest(groupId, practiceId, direction, callback)
+
+    /**
      * Returns true if the user can create a drive request for (groupId, practiceId, direction):
      * slot is free (no driver for that direction) and no PENDING request exists.
      * On failure, callback receives (false, errorMessage).

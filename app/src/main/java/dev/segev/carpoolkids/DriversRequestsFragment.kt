@@ -13,9 +13,9 @@ import com.google.firebase.firestore.ListenerRegistration
 import dev.segev.carpoolkids.data.DriveRequestRepository
 import dev.segev.carpoolkids.data.PracticeRepository
 import dev.segev.carpoolkids.data.UserRepository
+import dev.segev.carpoolkids.model.Practice
 import dev.segev.carpoolkids.databinding.FragmentDriveRequestsBinding
 import dev.segev.carpoolkids.model.DriveRequest
-import dev.segev.carpoolkids.model.Practice
 import dev.segev.carpoolkids.ui.drive.DriveRequestListAdapter
 import dev.segev.carpoolkids.utilities.Constants
 import java.util.Calendar
@@ -59,6 +59,8 @@ class DriversRequestsFragment : Fragment() {
         binding.driveRequestsList.adapter = adapter
 
         binding.driveRequestsRequestBtn.setOnClickListener { openRequestDriveDialog(groupId) }
+        binding.driveRequestsIllDriveBtn.visibility = if (isParent) View.VISIBLE else View.GONE
+        binding.driveRequestsIllDriveBtn.setOnClickListener { openIllDriveDialog(groupId) }
         attachListener(groupId)
     }
 
@@ -109,6 +111,24 @@ class DriversRequestsFragment : Fragment() {
 
     private fun openRequestDriveDialog(groupId: String) {
         if (groupId.isEmpty()) return
+        openPracticeDirectionPicker(groupId, getString(R.string.drive_request_dialog_title)) { practice, direction ->
+            createRequestForSlot(groupId, practice, direction)
+        }
+    }
+
+    private fun openIllDriveDialog(groupId: String) {
+        if (groupId.isEmpty()) return
+        openPracticeDirectionPicker(groupId, getString(R.string.drive_request_ill_drive)) { practice, direction ->
+            selfDeclareForSlot(groupId, practice, direction)
+        }
+    }
+
+    private fun openPracticeDirectionPicker(
+        groupId: String,
+        title: String,
+        onSelected: (Practice, String) -> Unit
+    ) {
+        if (groupId.isEmpty()) return
         val weekStart = getSundayStartOfWeek(Calendar.getInstance().timeInMillis)
         val weekEnd = weekStart + 4 * 7 * 24 * 60 * 60 * 1000L - 1
         PracticeRepository.getPracticesForWeek(groupId, weekStart, weekEnd) { practices, error ->
@@ -117,20 +137,43 @@ class DriversRequestsFragment : Fragment() {
                 Snackbar.make(binding.root, getString(R.string.drive_requests_no_practices), Snackbar.LENGTH_LONG).show()
                 return@getPracticesForWeek
             }
+            val now = System.currentTimeMillis()
+            val futurePractices = practices.filter { practiceStartMillis(it) > now }
+            if (futurePractices.isEmpty()) {
+                Snackbar.make(binding.root, getString(R.string.drive_requests_no_practices), Snackbar.LENGTH_LONG).show()
+                return@getPracticesForWeek
+            }
             val options = mutableListOf<Pair<Practice, String>>()
-            for (p in practices) {
+            for (p in futurePractices) {
                 options.add(p to DriveRequest.DIRECTION_TO)
                 options.add(p to DriveRequest.DIRECTION_FROM)
             }
             val labels = options.map { (p, dir) -> "${formatPracticeDateShort(p.dateMillis)} – $dir" }
             AlertDialog.Builder(requireContext())
-                .setTitle(getString(R.string.drive_request_dialog_title))
+                .setTitle(title)
                 .setItems(labels.toTypedArray()) { _, which ->
                     val (practice, direction) = options[which]
-                    createRequestForSlot(groupId, practice, direction)
+                    onSelected(practice, direction)
                 }
                 .show()
         }
+    }
+
+    /**
+     * Epoch ms of the practice start (date + startTime "HH:mm").
+     * Used to filter out past practices so we only show future ones.
+     */
+    private fun practiceStartMillis(practice: Practice): Long {
+        val parts = practice.startTime.split(":")
+        if (parts.size < 2) return practice.dateMillis
+        val hour = parts[0].toIntOrNull() ?: 0
+        val minute = parts[1].toIntOrNull() ?: 0
+        val cal = Calendar.getInstance().apply { timeInMillis = practice.dateMillis }
+        cal.set(Calendar.HOUR_OF_DAY, hour)
+        cal.set(Calendar.MINUTE, minute)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        return cal.timeInMillis
     }
 
     private fun createRequestForSlot(groupId: String, practice: Practice, direction: String) {
@@ -165,6 +208,43 @@ class DriversRequestsFragment : Fragment() {
                 if (_binding == null) return@createDriveRequest
                 if (success) {
                     Snackbar.make(binding.root, getString(R.string.drive_request_created), Snackbar.LENGTH_SHORT).show()
+                } else {
+                    Snackbar.make(binding.root, err ?: getString(R.string.create_join_error), Snackbar.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private fun selfDeclareForSlot(groupId: String, practice: Practice, direction: String) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        if (uid.isNullOrBlank()) {
+            Snackbar.make(binding.root, getString(R.string.create_join_error), Snackbar.LENGTH_SHORT).show()
+            return
+        }
+        DriveRequestRepository.canSelfDeclare(groupId, practice.id, direction) { canDo, errorMessage ->
+            if (_binding == null) return@canSelfDeclare
+            if (!canDo) {
+                val msg = when (errorMessage) {
+                    "Slot already taken" -> getString(R.string.drive_request_slot_taken)
+                    "A request is already open for this" -> getString(R.string.drive_request_already_open)
+                    else -> errorMessage ?: getString(R.string.create_join_error)
+                }
+                Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).show()
+                return@canSelfDeclare
+            }
+            val driverToUid = if (direction == DriveRequest.DIRECTION_TO) uid else null
+            val driverFromUid = if (direction == DriveRequest.DIRECTION_FROM) uid else null
+            PracticeRepository.updatePractice(
+                practice.id,
+                startTime = null,
+                endTime = null,
+                location = null,
+                driverToUid = driverToUid,
+                driverFromUid = driverFromUid
+            ) { success, err ->
+                if (_binding == null) return@updatePractice
+                if (success) {
+                    Snackbar.make(binding.root, getString(R.string.drive_request_self_declared), Snackbar.LENGTH_SHORT).show()
                 } else {
                     Snackbar.make(binding.root, err ?: getString(R.string.create_join_error), Snackbar.LENGTH_LONG).show()
                 }
@@ -247,16 +327,19 @@ class DriversRequestsFragment : Fragment() {
                 binding.driveRequestsEmpty.visibility = View.GONE
                 binding.driveRequestsList.visibility = View.VISIBLE
                 adapter.submitList(requests)
-                val requesterUids = requests.map { it.requesterUid }.distinct()
+                val allUids = (requests.map { it.requesterUid } +
+                    requests.mapNotNull { it.acceptedByUid } +
+                    requests.mapNotNull { it.declinedByUid }
+                ).distinct()
                 val practiceIds = requests.map { it.practiceId }.distinct()
                 PracticeRepository.getPracticesByIds(practiceIds) { practices ->
                     if (_binding == null) return@getPracticesByIds
                     adapter.setPractices(practices)
                 }
-                if (requesterUids.isEmpty()) {
+                if (allUids.isEmpty()) {
                     adapter.setRequesterNames(emptyMap())
                 } else {
-                    UserRepository.getUsersByIds(requesterUids) { profileMap ->
+                    UserRepository.getUsersByIds(allUids) { profileMap ->
                         if (_binding == null) return@getUsersByIds
                         val nameMap = profileMap.mapValues { (_, profile) ->
                             profile.displayName?.takeIf { it.isNotBlank() }

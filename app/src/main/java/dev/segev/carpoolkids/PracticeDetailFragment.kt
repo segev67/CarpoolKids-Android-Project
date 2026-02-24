@@ -55,6 +55,10 @@ class PracticeDetailFragment : Fragment() {
         binding.practiceDetailSave.setOnClickListener { save(groupId) }
         binding.practiceDetailRequestTo.setOnClickListener { requestDrive(groupId, DriveRequest.DIRECTION_TO) }
         binding.practiceDetailRequestFrom.setOnClickListener { requestDrive(groupId, DriveRequest.DIRECTION_FROM) }
+        binding.practiceDetailIllTakeTo.setOnClickListener { selfDeclare(groupId, DriveRequest.DIRECTION_TO) }
+        binding.practiceDetailIllTakeFrom.setOnClickListener { selfDeclare(groupId, DriveRequest.DIRECTION_FROM) }
+        binding.practiceDetailCancelTo.setOnClickListener { cancelDrive(groupId, DriveRequest.DIRECTION_TO) }
+        binding.practiceDetailCancelFrom.setOnClickListener { cancelDrive(groupId, DriveRequest.DIRECTION_FROM) }
 
         PracticeRepository.getPracticeById(practiceId) { p, error ->
             if (_binding == null) return@getPracticeById
@@ -75,6 +79,9 @@ class PracticeDetailFragment : Fragment() {
     }
 
     private fun bindPractice(p: Practice) {
+        val role = arguments?.getString(ARG_ROLE).orEmpty()
+        val isParent = role == Constants.UserRole.PARENT
+        val currentUid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
         binding.practiceDetailDay.text = formatDayOfWeek(p.dateMillis)
         binding.practiceDetailDate.text = formatDate(p.dateMillis)
         binding.practiceDetailStartTime.setText(p.startTime)
@@ -82,6 +89,93 @@ class PracticeDetailFragment : Fragment() {
         binding.practiceDetailLocation.setText(p.location)
         binding.practiceDetailRequestTo.visibility = if (p.driverToUid.isNullOrBlank()) View.VISIBLE else View.GONE
         binding.practiceDetailRequestFrom.visibility = if (p.driverFromUid.isNullOrBlank()) View.VISIBLE else View.GONE
+        binding.practiceDetailIllTakeTo.visibility = if (p.driverToUid.isNullOrBlank() && isParent) View.VISIBLE else View.GONE
+        binding.practiceDetailIllTakeFrom.visibility = if (p.driverFromUid.isNullOrBlank() && isParent) View.VISIBLE else View.GONE
+        binding.practiceDetailCancelTo.visibility = if (p.driverToUid == currentUid) View.VISIBLE else View.GONE
+        binding.practiceDetailCancelFrom.visibility = if (p.driverFromUid == currentUid) View.VISIBLE else View.GONE
+    }
+
+    private fun cancelDrive(groupId: String, direction: String) {
+        val p = practice ?: return
+        val currentUid = FirebaseAuth.getInstance().currentUser?.uid
+        if (currentUid.isNullOrBlank()) return
+        val isDriver = when (direction) {
+            DriveRequest.DIRECTION_TO -> p.driverToUid == currentUid
+            DriveRequest.DIRECTION_FROM -> p.driverFromUid == currentUid
+            else -> false
+        }
+        if (!isDriver) return
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setMessage(getString(R.string.drive_request_cancel_confirm))
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                val driverToUid = if (direction == DriveRequest.DIRECTION_TO) "" else null
+                val driverFromUid = if (direction == DriveRequest.DIRECTION_FROM) "" else null
+                PracticeRepository.updatePractice(
+                    p.id,
+                    startTime = null,
+                    endTime = null,
+                    location = null,
+                    driverToUid = driverToUid,
+                    driverFromUid = driverFromUid
+                ) { success, err ->
+                    if (_binding == null) return@updatePractice
+                    if (success) {
+                        Snackbar.make(binding.root, getString(R.string.drive_request_slot_freed), Snackbar.LENGTH_SHORT).show()
+                        binding.practiceDetailCancelTo.visibility = if (direction == DriveRequest.DIRECTION_TO) View.GONE else binding.practiceDetailCancelTo.visibility
+                        binding.practiceDetailCancelFrom.visibility = if (direction == DriveRequest.DIRECTION_FROM) View.GONE else binding.practiceDetailCancelFrom.visibility
+                        binding.practiceDetailRequestTo.visibility = if (direction == DriveRequest.DIRECTION_TO) View.VISIBLE else binding.practiceDetailRequestTo.visibility
+                        binding.practiceDetailRequestFrom.visibility = if (direction == DriveRequest.DIRECTION_FROM) View.VISIBLE else binding.practiceDetailRequestFrom.visibility
+                        binding.practiceDetailIllTakeTo.visibility = if (direction == DriveRequest.DIRECTION_TO && arguments?.getString(ARG_ROLE) == Constants.UserRole.PARENT) View.VISIBLE else binding.practiceDetailIllTakeTo.visibility
+                        binding.practiceDetailIllTakeFrom.visibility = if (direction == DriveRequest.DIRECTION_FROM && arguments?.getString(ARG_ROLE) == Constants.UserRole.PARENT) View.VISIBLE else binding.practiceDetailIllTakeFrom.visibility
+                    } else {
+                        Snackbar.make(binding.root, err ?: getString(R.string.create_join_error), Snackbar.LENGTH_LONG).show()
+                    }
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun selfDeclare(groupId: String, direction: String) {
+        val p = practice ?: return
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        if (uid.isNullOrBlank()) {
+            Snackbar.make(binding.root, getString(R.string.create_join_error), Snackbar.LENGTH_SHORT).show()
+            return
+        }
+        DriveRequestRepository.canSelfDeclare(groupId, p.id, direction) { canDo, errorMessage ->
+            if (_binding == null) return@canSelfDeclare
+            if (!canDo) {
+                val msg = when (errorMessage) {
+                    "Slot already taken" -> getString(R.string.drive_request_slot_taken)
+                    "A request is already open for this" -> getString(R.string.drive_request_already_open)
+                    else -> errorMessage ?: getString(R.string.create_join_error)
+                }
+                Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).show()
+                return@canSelfDeclare
+            }
+            val driverToUid = if (direction == DriveRequest.DIRECTION_TO) uid else null
+            val driverFromUid = if (direction == DriveRequest.DIRECTION_FROM) uid else null
+            PracticeRepository.updatePractice(
+                p.id,
+                startTime = null,
+                endTime = null,
+                location = null,
+                driverToUid = driverToUid,
+                driverFromUid = driverFromUid
+            ) { success, err ->
+                if (_binding == null) return@updatePractice
+                if (success) {
+                    Snackbar.make(binding.root, getString(R.string.drive_request_self_declared), Snackbar.LENGTH_SHORT).show()
+                    binding.practiceDetailRequestTo.visibility = if (direction == DriveRequest.DIRECTION_TO) View.GONE else binding.practiceDetailRequestTo.visibility
+                    binding.practiceDetailRequestFrom.visibility = if (direction == DriveRequest.DIRECTION_FROM) View.GONE else binding.practiceDetailRequestFrom.visibility
+                    binding.practiceDetailIllTakeTo.visibility = if (direction == DriveRequest.DIRECTION_TO) View.GONE else binding.practiceDetailIllTakeTo.visibility
+                    binding.practiceDetailIllTakeFrom.visibility = if (direction == DriveRequest.DIRECTION_FROM) View.GONE else binding.practiceDetailIllTakeFrom.visibility
+                } else {
+                    Snackbar.make(binding.root, err ?: getString(R.string.create_join_error), Snackbar.LENGTH_LONG).show()
+                }
+            }
+        }
     }
 
     private fun requestDrive(groupId: String, direction: String) {

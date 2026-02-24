@@ -67,20 +67,21 @@ class DriveRequestListAdapter(
             onAcceptClick: (DriveRequest) -> Unit,
             onDeclineClick: (DriveRequest) -> Unit
         ) {
+            val ctx = binding.root.context
             val requesterLabel = requesterNames[request.requesterUid]
-                ?: binding.root.context.getString(dev.segev.carpoolkids.R.string.join_request_requester_unknown)
-            binding.itemDriveRequestRequester.text = binding.root.context.getString(
+                ?: ctx.getString(dev.segev.carpoolkids.R.string.join_request_requester_unknown)
+            binding.itemDriveRequestRequester.text = ctx.getString(
                 dev.segev.carpoolkids.R.string.drive_request_requested_by,
                 requesterLabel
             )
 
             val dateStr = formatPracticeDateLong(request.practiceDateMillis)
-            val directionStr = binding.root.context.getString(
+            val directionStr = ctx.getString(
                 if (request.direction == DriveRequest.DIRECTION_TO) dev.segev.carpoolkids.R.string.drive_request_direction_to_practice
                 else dev.segev.carpoolkids.R.string.drive_request_direction_from_practice
             )
             @Suppress("StringFormatInvalid")
-            binding.itemDriveRequestPracticeDate.text = binding.root.context.getString(
+            binding.itemDriveRequestPracticeDate.text = ctx.getString(
                 dev.segev.carpoolkids.R.string.drive_request_date_direction,
                 dateStr,
                 directionStr
@@ -91,10 +92,30 @@ class DriveRequestListAdapter(
             binding.itemDriveRequestLocation.text = practice?.location?.takeIf { it.isNotBlank() } ?: "—"
 
             binding.itemDriveRequestStatus.text = when (request.status) {
-                DriveRequest.STATUS_PENDING -> "Pending"
-                DriveRequest.STATUS_APPROVED -> "Approved"
-                DriveRequest.STATUS_DECLINED -> "Declined"
+                DriveRequest.STATUS_PENDING -> ctx.getString(dev.segev.carpoolkids.R.string.status_pending)
+                DriveRequest.STATUS_APPROVED -> ctx.getString(dev.segev.carpoolkids.R.string.status_approved)
+                DriveRequest.STATUS_DECLINED -> ctx.getString(dev.segev.carpoolkids.R.string.status_declined)
                 else -> request.status
+            }
+
+            when {
+                request.status == DriveRequest.STATUS_APPROVED && request.acceptedByUid != null -> {
+                    val name = requesterNames[request.acceptedByUid]
+                        ?: ctx.getString(dev.segev.carpoolkids.R.string.join_request_requester_unknown)
+                    binding.itemDriveRequestResolvedBy.text = ctx.getString(
+                        dev.segev.carpoolkids.R.string.drive_request_approved_by, name
+                    )
+                    binding.itemDriveRequestResolvedBy.visibility = View.VISIBLE
+                }
+                request.status == DriveRequest.STATUS_DECLINED && request.declinedByUid != null -> {
+                    val name = requesterNames[request.declinedByUid]
+                        ?: ctx.getString(dev.segev.carpoolkids.R.string.join_request_requester_unknown)
+                    binding.itemDriveRequestResolvedBy.text = ctx.getString(
+                        dev.segev.carpoolkids.R.string.drive_request_declined_by, name
+                    )
+                    binding.itemDriveRequestResolvedBy.visibility = View.VISIBLE
+                }
+                else -> binding.itemDriveRequestResolvedBy.visibility = View.GONE
             }
 
             val showActions = request.status == DriveRequest.STATUS_PENDING && isParent

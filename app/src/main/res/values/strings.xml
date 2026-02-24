@@ -121,6 +121,13 @@
     <string name="drive_request_created">Drive request sent.</string>
     <string name="drive_request_request_to">Request TO</string>
     <string name="drive_request_request_from">Request FROM</string>
+    <string name="drive_request_ill_take_to">I\'ll take TO</string>
+    <string name="drive_request_ill_take_from">I\'ll take FROM</string>
+    <string name="drive_request_self_declared">You are now driving for this slot.</string>
+    <string name="drive_request_ill_drive">I\'ll drive</string>
+    <string name="drive_request_cancel_drive">I can\'t drive</string>
+    <string name="drive_request_slot_freed">Slot is open again.</string>
+    <string name="drive_request_cancel_confirm">Stop driving for this slot? It will be open for others.</string>
     <string name="drive_requests_no_practices">No practices yet. Add a practice in Schedule first.</string>
     <string name="drive_request_dialog_title">Request a drive</string>
     <string name="drive_request_accept">Accept</string>
@@ -131,6 +138,9 @@
     <string name="drive_request_date_direction">%1$s - %2$s</string>
     <string name="drive_request_direction_to_practice">TO practice</string>
     <string name="drive_request_direction_from_practice">FROM practice</string>
+    <string name="drive_request_approved_by">Approved by %1$s</string>
+    <string name="drive_request_declined_by">Declined by %1$s</string>
+    <string name="drive_requests_load_error">Could not load drive requests. Try again.</string>
     <!-- Group tab hub -->
     <string name="carpool_header_format">Carpool: %s</string>
     <string name="group_hub_header_no_group">No active group</string>

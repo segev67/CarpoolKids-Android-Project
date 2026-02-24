@@ -40,6 +40,15 @@
             app:iconPadding="@dimen/spacing_sm"
             app:iconSize="20dp" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/drive_requests_ill_drive_btn"
+            style="@style/Widget.CarpoolKids.Button.Outlined"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_sm"
+            android:text="@string/drive_request_ill_drive"
+            android:visibility="gone" />
+
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/drive_requests_empty"
             style="@style/TextAppearance.Home.TeamSubtitle"

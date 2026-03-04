@@ -159,23 +159,6 @@ class DriversRequestsFragment : Fragment() {
         }
     }
 
-    /**
-     * Epoch ms of the practice start (date + startTime "HH:mm").
-     * Used to filter out past practices so we only show future ones.
-     */
-    private fun practiceStartMillis(practice: Practice): Long {
-        val parts = practice.startTime.split(":")
-        if (parts.size < 2) return practice.dateMillis
-        val hour = parts[0].toIntOrNull() ?: 0
-        val minute = parts[1].toIntOrNull() ?: 0
-        val cal = Calendar.getInstance().apply { timeInMillis = practice.dateMillis }
-        cal.set(Calendar.HOUR_OF_DAY, hour)
-        cal.set(Calendar.MINUTE, minute)
-        cal.set(Calendar.SECOND, 0)
-        cal.set(Calendar.MILLISECOND, 0)
-        return cal.timeInMillis
-    }
-
     private fun createRequestForSlot(groupId: String, practice: Practice, direction: String) {
         val uid = FirebaseAuth.getInstance().currentUser?.uid
         if (uid.isNullOrBlank()) {
@@ -306,6 +289,23 @@ class DriversRequestsFragment : Fragment() {
         return cal.timeInMillis
     }
 
+    /**
+     * Epoch ms of the practice start (date + startTime "HH:mm").
+     * Used to filter out past practices so we only show future ones.
+     */
+    private fun practiceStartMillis(practice: Practice): Long {
+        val parts = practice.startTime.split(":")
+        if (parts.size < 2) return practice.dateMillis
+        val hour = parts[0].toIntOrNull() ?: 0
+        val minute = parts[1].toIntOrNull() ?: 0
+        val cal = Calendar.getInstance().apply { timeInMillis = practice.dateMillis }
+        cal.set(Calendar.HOUR_OF_DAY, hour)
+        cal.set(Calendar.MINUTE, minute)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        return cal.timeInMillis
+    }
+
     private fun attachListener(groupId: String) {
         driveRequestsListener?.remove()
         driveRequestsListener = null
@@ -326,7 +326,6 @@ class DriversRequestsFragment : Fragment() {
             } else {
                 binding.driveRequestsEmpty.visibility = View.GONE
                 binding.driveRequestsList.visibility = View.VISIBLE
-                adapter.submitList(requests)
                 val allUids = (requests.map { it.requesterUid } +
                     requests.mapNotNull { it.acceptedByUid } +
                     requests.mapNotNull { it.declinedByUid }
@@ -334,7 +333,22 @@ class DriversRequestsFragment : Fragment() {
                 val practiceIds = requests.map { it.practiceId }.distinct()
                 PracticeRepository.getPracticesByIds(practiceIds) { practices ->
                     if (_binding == null) return@getPracticesByIds
-                    adapter.setPractices(practices)
+                    val now = System.currentTimeMillis()
+                    val futureRequests = requests.filter { request ->
+                        val practice = practices[request.practiceId] ?: return@filter false
+                        practiceStartMillis(practice) > now
+                    }
+                    if (futureRequests.isEmpty()) {
+                        binding.driveRequestsEmpty.visibility = View.VISIBLE
+                        binding.driveRequestsList.visibility = View.GONE
+                        adapter.submitList(emptyList())
+                        adapter.setPractices(emptyMap())
+                        return@getPracticesByIds
+                    }
+                    adapter.submitList(futureRequests)
+                    // Keep only practices for the requests we actually show
+                    val futurePracticeMap = practices.filterKeys { id -> futureRequests.any { it.practiceId == id } }
+                    adapter.setPractices(futurePracticeMap)
                 }
                 if (allUids.isEmpty()) {
                     adapter.setRequesterNames(emptyMap())

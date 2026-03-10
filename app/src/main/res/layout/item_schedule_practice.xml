@@ -42,72 +42,118 @@
                 tools:text="11 Feb" />
         </LinearLayout>
 
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/schedule_practice_time"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_xs"
-            android:textSize="@dimen/text_card_day_size"
-            android:textColor="@color/dashboard_text_secondary"
-            tools:text="17:00 – 18:30" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/schedule_practice_location"
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_clock"
+                android:scaleType="fitCenter"
+                android:contentDescription="@null"
+                app:tint="@color/dashboard_text_secondary" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/schedule_practice_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/spacing_xs"
+                android:textSize="@dimen/text_card_day_size"
+                android:textColor="@color/dashboard_text_secondary"
+                tools:text="17:00 – 18:30" />
+        </LinearLayout>
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_xs"
-            android:textSize="@dimen/text_card_day_size"
-            android:textColor="@color/dashboard_text_secondary"
-            android:maxLines="2"
-            android:ellipsize="end"
-            tools:text="Main Gym" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_location"
+                android:scaleType="fitCenter"
+                android:contentDescription="@null"
+                app:tint="@color/dashboard_text_secondary" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/schedule_practice_location"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/spacing_xs"
+                android:textSize="@dimen/text_card_day_size"
+                android:textColor="@color/dashboard_text_secondary"
+                android:maxLines="2"
+                android:ellipsize="end"
+                tools:text="Main Gym" />
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_sm"
-            android:orientation="horizontal">
+            android:orientation="vertical">
 
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/schedule_practice_to_label"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="@dimen/text_badge_size"
-                android:textColor="@color/dashboard_text_secondary"
-                android:text="@string/schedule_to" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/schedule_practice_to_value"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="@dimen/spacing_xs"
-                android:textSize="@dimen/text_badge_size"
-                android:textColor="@color/dashboard_text_primary"
-                android:maxLines="1"
-                android:ellipsize="end"
-                tools:text="No driver" />
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/schedule_practice_to_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="10sp"
+                    android:textColor="@color/dashboard_text_secondary"
+                    android:text="@string/schedule_to" />
 
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/schedule_practice_from_label"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/spacing_md"
-                android:textSize="@dimen/text_badge_size"
-                android:textColor="@color/dashboard_text_secondary"
-                android:text="@string/schedule_from" />
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/schedule_practice_to_value"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="@dimen/spacing_xs"
+                    android:textSize="@dimen/text_badge_size"
+                    android:textColor="@color/dashboard_text_primary"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    tools:text="No driver" />
+            </LinearLayout>
 
-            <com.google.android.material.textview.MaterialTextView
-                android:id="@+id/schedule_practice_from_value"
-                android:layout_width="0dp"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="@dimen/spacing_xs"
-                android:textSize="@dimen/text_badge_size"
-                android:textColor="@color/dashboard_text_primary"
-                android:maxLines="1"
-                android:ellipsize="end"
-                tools:text="No driver" />
+                android:layout_marginTop="@dimen/spacing_xs"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/schedule_practice_from_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="10sp"
+                    android:textColor="@color/dashboard_text_secondary"
+                    android:text="@string/schedule_from" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/schedule_practice_from_value"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="@dimen/spacing_xs"
+                    android:textSize="@dimen/text_badge_size"
+                    android:textColor="@color/dashboard_text_primary"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    tools:text="No driver" />
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

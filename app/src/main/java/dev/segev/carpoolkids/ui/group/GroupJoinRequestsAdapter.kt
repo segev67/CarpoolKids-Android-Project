@@ -1,11 +1,14 @@
 package dev.segev.carpoolkids.ui.group
 
+import android.content.res.ColorStateList
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import dev.segev.carpoolkids.R
 import dev.segev.carpoolkids.databinding.ItemJoinRequestGroupBinding
 import dev.segev.carpoolkids.model.JoinRequest
 
@@ -42,6 +45,20 @@ class GroupJoinRequestsAdapter(
         fun bind(row: GroupJoinRequestRow) {
             binding.itemJoinRequestRequester.text = row.requesterDisplay
             binding.itemJoinRequestStatus.text = row.statusLabel
+            val ctx = binding.root.context
+            val bgRes = when (row.request.status) {
+                JoinRequest.STATUS_PENDING -> R.color.status_pending_orange
+                JoinRequest.STATUS_APPROVED -> R.color.status_approve_green
+                JoinRequest.STATUS_BLOCKED -> R.color.status_block_red
+                JoinRequest.STATUS_DECLINED -> R.color.status_block_red
+                else -> R.color.dashboard_card_background
+            }
+            binding.itemJoinRequestStatus.chipBackgroundColor = ColorStateList.valueOf(
+                ContextCompat.getColor(ctx, bgRes)
+            )
+            binding.itemJoinRequestStatus.setTextColor(
+                ColorStateList.valueOf(ContextCompat.getColor(ctx, android.R.color.white))
+            )
             binding.itemJoinRequestTime.text = row.relativeTime
             binding.itemJoinRequestActions.visibility = if (row.showActions) View.VISIBLE else View.GONE
             if (row.showActions) {

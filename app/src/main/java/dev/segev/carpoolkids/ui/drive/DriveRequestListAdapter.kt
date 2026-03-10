@@ -1,9 +1,12 @@
 package dev.segev.carpoolkids.ui.drive
 
+import android.content.res.ColorStateList
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
+import dev.segev.carpoolkids.R
 import dev.segev.carpoolkids.databinding.ItemDriveRequestBinding
 import dev.segev.carpoolkids.model.DriveRequest
 import dev.segev.carpoolkids.model.Practice
@@ -97,6 +100,18 @@ class DriveRequestListAdapter(
                 DriveRequest.STATUS_DECLINED -> ctx.getString(dev.segev.carpoolkids.R.string.status_declined)
                 else -> request.status
             }
+            val statusBgRes = when (request.status) {
+                DriveRequest.STATUS_PENDING -> R.color.status_pending_orange
+                DriveRequest.STATUS_APPROVED -> R.color.status_approve_green
+                DriveRequest.STATUS_DECLINED -> R.color.status_block_red
+                else -> R.color.dashboard_card_background
+            }
+            binding.itemDriveRequestStatus.chipBackgroundColor = ColorStateList.valueOf(
+                ContextCompat.getColor(ctx, statusBgRes)
+            )
+            binding.itemDriveRequestStatus.setTextColor(
+                ColorStateList.valueOf(ContextCompat.getColor(ctx, android.R.color.white))
+            )
 
             when {
                 request.status == DriveRequest.STATUS_APPROVED && request.acceptedByUid != null -> {

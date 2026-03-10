@@ -70,7 +70,9 @@
                 android:layout_weight="1"
                 android:layout_marginEnd="@dimen/spacing_xs"
                 android:text="@string/btn_approve"
-                android:textSize="12sp" />
+                android:textColor="@color/white"
+                android:textSize="12sp"
+                app:backgroundTint="@color/status_approve_green" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/item_join_request_btn_decline"
@@ -80,7 +82,9 @@
                 android:layout_weight="1"
                 android:layout_marginEnd="@dimen/spacing_xs"
                 android:text="@string/btn_decline"
-                android:textSize="12sp" />
+                android:textColor="@color/white"
+                android:textSize="12sp"
+                app:backgroundTint="@color/status_block_red" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/item_join_request_btn_block"
@@ -89,7 +93,9 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/btn_block"
-                android:textSize="12sp" />
+                android:textColor="@color/white"
+                android:textSize="12sp"
+                app:backgroundTint="@color/status_block_red" />
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

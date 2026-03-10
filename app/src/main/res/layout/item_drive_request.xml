@@ -33,7 +33,9 @@
                 android:id="@+id/item_drive_request_status"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+                android:textSize="@dimen/text_badge_size"
+                app:chipMinHeight="24dp" />
         </LinearLayout>
 
         <com.google.android.material.textview.MaterialTextView
@@ -114,16 +116,20 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginEnd="@dimen/spacing_xs"
-                android:text="@string/drive_request_accept" />
+                android:text="@string/drive_request_accept"
+                android:textColor="@color/white"
+                app:backgroundTint="@color/status_approve_green" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/item_drive_request_decline"
-                style="@style/Widget.CarpoolKids.Button.Outlined"
+                style="@style/Widget.CarpoolKids.Button"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginStart="@dimen/spacing_xs"
-                android:text="@string/drive_request_decline" />
+                android:text="@string/drive_request_decline"
+                android:textColor="@color/white"
+                app:backgroundTint="@color/status_block_red" />
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

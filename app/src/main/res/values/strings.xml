@@ -34,7 +34,6 @@
     <string name="add_practice">Add practice</string>
     <string name="view_schedule">View schedule</string>
     <string name="parent_requests">Parent requests</string>
-    <string name="request_parent_to_drive">Request parent to drive</string>
     <string name="dashboard_load_error">Could not load group.</string>
     <!-- Link parent & child -->
     <string name="link_parent_child_section">Link parent &amp; child (same group)</string>
@@ -80,8 +79,8 @@
     <string name="schedule_no_practices">No practices this week. Tap Add practice to add one.</string>
     <string name="schedule_load_error">Could not load practices. Check your connection and try again.</string>
     <string name="schedule_retry">Retry</string>
-    <string name="schedule_to">To:</string>
-    <string name="schedule_from">From:</string>
+    <string name="schedule_to">To Practice:</string>
+    <string name="schedule_from">From Practice:</string>
     <string name="schedule_no_driver">No driver</string>
     <string name="schedule_time_range">%1$s – %2$s</string>
     <string name="schedule_week_format">%1$d – %2$d %3$s %4$d</string>
@@ -98,6 +97,9 @@
     <string name="practice_detail_location">Location</string>
     <string name="practice_detail_driver_to">Driver to</string>
     <string name="practice_detail_driver_from">Driver from</string>
+    <string name="practice_detail_to_practice">To Practice</string>
+    <string name="practice_detail_from_practice">From Practice</string>
+    <string name="practice_detail_transportation_title">Transportation</string>
     <string name="btn_save">Save</string>
     <string name="practice_saved">Practice updated</string>
     <string name="practice_load_error">Could not load practice.</string>
@@ -113,16 +115,14 @@
     <string name="dashboard_group_title">Group details</string>
     <string name="dashboard_drivers_requests_title">Drive requests</string>
     <string name="drive_requests_subtitle">Coordinate transportation</string>
-    <string name="drive_request_request_parent_to_drive">Request parent to drive</string>
     <string name="drive_requests_empty">No drive requests yet.</string>
     <string name="drive_request_requested_by">Requested by %1$s</string>
     <string name="drive_request_slot_taken">This slot is already taken.</string>
     <string name="drive_request_already_open">A request is already open for this.</string>
     <string name="drive_request_created">Drive request sent.</string>
-    <string name="drive_request_request_to">Request TO</string>
-    <string name="drive_request_request_from">Request FROM</string>
-    <string name="drive_request_ill_take_to">I\'ll take TO</string>
-    <string name="drive_request_ill_take_from">I\'ll take FROM</string>
+    <string name="carpool_request">Carpool Request</string>
+    <string name="drive_request_ill_take_to">I will drive</string>
+    <string name="drive_request_ill_take_from">I will drive</string>
     <string name="drive_request_self_declared">You are now driving for this slot.</string>
     <string name="drive_request_ill_drive">I\'ll drive</string>
     <string name="drive_request_cancel_drive">I can\'t drive</string>
@@ -136,7 +136,7 @@
     <string name="drive_request_approved">You are now driving for this slot.</string>
     <string name="drive_request_declined">Request declined.</string>
     <string name="drive_request_date_direction">%1$s - %2$s</string>
-    <string name="drive_request_direction_to_practice">TO practice</string>
+    <string name="drive_request_direction_to_practice">To Practice</string>
     <string name="drive_request_direction_from_practice">FROM practice</string>
     <string name="drive_request_approved_by">Approved by %1$s</string>
     <string name="drive_request_declined_by">Declined by %1$s</string>

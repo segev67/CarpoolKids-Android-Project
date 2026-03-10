@@ -104,7 +104,7 @@ class DashboardHomeFragment : Fragment() {
                         JoinRequest.STATUS_BLOCKED -> getString(R.string.status_blocked)
                         else -> req.status
                     }
-                    MyRequestRow(name, statusLabel, relative)
+                    MyRequestRow(name, statusLabel, req.status, relative)
                 }
                 binding.dashboardHomeMyRequestsEmpty.visibility = View.GONE
                 binding.dashboardHomeMyRequestsList.visibility = View.VISIBLE

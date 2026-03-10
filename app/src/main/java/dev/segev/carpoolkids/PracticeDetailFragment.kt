@@ -4,12 +4,10 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
 import androidx.fragment.app.Fragment
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import dev.segev.carpoolkids.data.DriveRequestRepository
-import dev.segev.carpoolkids.data.GroupRepository
 import dev.segev.carpoolkids.data.PracticeRepository
 import dev.segev.carpoolkids.data.UserRepository
 import dev.segev.carpoolkids.databinding.FragmentPracticeDetailBinding
@@ -29,9 +27,6 @@ class PracticeDetailFragment : Fragment() {
     private val binding get() = _binding!!
 
     private var practice: Practice? = null
-    private var parentUids: List<String> = emptyList()
-    private var parentLabels: List<String> = emptyList()
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -69,7 +64,7 @@ class PracticeDetailFragment : Fragment() {
             }
             practice = p
             bindPractice(p)
-            loadParentsForSpinners(groupId, p)
+            loadDriverNames(p)
         }
     }
 
@@ -87,6 +82,9 @@ class PracticeDetailFragment : Fragment() {
         binding.practiceDetailStartTime.setText(p.startTime)
         binding.practiceDetailEndTime.setText(p.endTime)
         binding.practiceDetailLocation.setText(p.location)
+        val noDriver = getString(R.string.schedule_no_driver)
+        binding.practiceDetailDriverToValue.text = noDriver
+        binding.practiceDetailDriverFromValue.text = noDriver
         binding.practiceDetailRequestTo.visibility = if (p.driverToUid.isNullOrBlank()) View.VISIBLE else View.GONE
         binding.practiceDetailRequestFrom.visibility = if (p.driverFromUid.isNullOrBlank()) View.VISIBLE else View.GONE
         binding.practiceDetailIllTakeTo.visibility = if (p.driverToUid.isNullOrBlank() && isParent) View.VISIBLE else View.GONE
@@ -220,51 +218,33 @@ class PracticeDetailFragment : Fragment() {
         }
     }
 
-    private fun loadParentsForSpinners(groupId: String, p: Practice) {
-        if (groupId.isEmpty()) {
-            setupDriverSpinners(emptyList(), emptyList(), p.driverToUid, p.driverFromUid)
+    private fun loadDriverNames(p: Practice) {
+        val toUid = p.driverToUid?.takeIf { it.isNotBlank() }
+        val fromUid = p.driverFromUid?.takeIf { it.isNotBlank() }
+        if (toUid == null && fromUid == null) {
             return
         }
-        GroupRepository.getGroupById(groupId) { group, _ ->
-            if (_binding == null) return@getGroupById
-            val memberIds = group?.memberIds ?: emptyList()
-            if (memberIds.isEmpty()) {
-                setupDriverSpinners(emptyList(), emptyList(), p.driverToUid, p.driverFromUid)
-                return@getGroupById
-            }
-            UserRepository.getUsersByIds(memberIds) { profileMap ->
-                if (_binding == null) return@getUsersByIds
-                val parents = memberIds.mapNotNull { uid ->
-                    profileMap[uid]?.takeIf { it.role == Constants.UserRole.PARENT }?.let { profile ->
-                        uid to (profile.displayName?.takeIf { it.isNotBlank() }
-                            ?: profile.email?.takeIf { it.isNotBlank() }
-                            ?: getString(R.string.join_request_requester_unknown))
-                    }
+        val uids = listOfNotNull(toUid, fromUid).distinct()
+        UserRepository.getUsersByIds(uids) { profileMap ->
+            if (_binding == null) return@getUsersByIds
+            val noDriver = getString(R.string.schedule_no_driver)
+            val toName = toUid?.let { uid ->
+                profileMap[uid]?.let { profile ->
+                    profile.displayName?.takeIf { it.isNotBlank() }
+                        ?: profile.email?.takeIf { it.isNotBlank() }
+                        ?: getString(R.string.join_request_requester_unknown)
                 }
-                val uids = listOf("") + parents.map { it.first }
-                val labels = listOf(getString(R.string.schedule_no_driver)) + parents.map { it.second }
-                parentUids = uids
-                parentLabels = labels
-                setupDriverSpinners(uids, labels, p.driverToUid, p.driverFromUid)
-            }
+            } ?: noDriver
+            val fromName = fromUid?.let { uid ->
+                profileMap[uid]?.let { profile ->
+                    profile.displayName?.takeIf { it.isNotBlank() }
+                        ?: profile.email?.takeIf { it.isNotBlank() }
+                        ?: getString(R.string.join_request_requester_unknown)
+                }
+            } ?: noDriver
+            binding.practiceDetailDriverToValue.text = toName
+            binding.practiceDetailDriverFromValue.text = fromName
         }
-    }
-
-    private fun setupDriverSpinners(
-        uids: List<String>,
-        labels: List<String>,
-        selectedToUid: String?,
-        selectedFromUid: String?
-    ) {
-        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, labels).apply {
-            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        }
-        binding.practiceDetailDriverTo.adapter = adapter
-        binding.practiceDetailDriverFrom.adapter = adapter
-        val toPos = uids.indexOf(selectedToUid.orEmpty().takeIf { it.isNotBlank() }.orEmpty())
-        val fromPos = uids.indexOf(selectedFromUid.orEmpty().takeIf { it.isNotBlank() }.orEmpty())
-        binding.practiceDetailDriverTo.setSelection(if (toPos >= 0) toPos else 0)
-        binding.practiceDetailDriverFrom.setSelection(if (fromPos >= 0) fromPos else 0)
     }
 
     private fun save(groupId: String) {
@@ -277,19 +257,13 @@ class PracticeDetailFragment : Fragment() {
             Snackbar.make(binding.root, getString(R.string.create_join_error), Snackbar.LENGTH_SHORT).show()
             return
         }
-
-        val driverToPos = binding.practiceDetailDriverTo.selectedItemPosition
-        val driverFromPos = binding.practiceDetailDriverFrom.selectedItemPosition
-        val driverToUid = if (parentUids.isNotEmpty() && driverToPos in parentUids.indices) parentUids[driverToPos] else ""
-        val driverFromUid = if (parentUids.isNotEmpty() && driverFromPos in parentUids.indices) parentUids[driverFromPos] else ""
-
         PracticeRepository.updatePractice(
             p.id,
             startTime,
             endTime,
             location,
-            driverToUid,
-            driverFromUid
+            null,
+            null
         ) { success, error ->
             if (_binding == null) return@updatePractice
             if (success) {

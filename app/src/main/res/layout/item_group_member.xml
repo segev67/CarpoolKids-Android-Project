@@ -39,7 +39,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/spacing_sm"
                 android:text="@string/group_details_you_badge"
-                android:textSize="@dimen/text_badge_size"
+                android:textSize="@dimen/text_card_day_size"
+                android:textStyle="bold"
                 android:textColor="@color/dashboard_text_secondary"
                 android:visibility="gone"
                 tools:visibility="visible" />

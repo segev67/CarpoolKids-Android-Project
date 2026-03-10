@@ -33,7 +33,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_lg"
-            android:text="@string/drive_request_request_parent_to_drive"
+            android:text="@string/carpool_request"
             app:icon="@android:drawable/ic_input_add"
             app:iconTint="@color/white"
             app:iconGravity="textStart"

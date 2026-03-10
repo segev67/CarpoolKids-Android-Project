@@ -72,6 +72,7 @@
     <string name="home_from_training">From Practice:</string>
     <string name="home_no_training_today">No practice today</string>
     <string name="home_today_day_off">Rest day, no practice today.</string>
+    <string name="home_hello_user">Hello %1$s</string>
     <string name="btn_teams_list">Teams List</string>
     <string name="btn_create_join_group">Create/Join Group</string>
     <string name="coming_soon">Coming soon</string>

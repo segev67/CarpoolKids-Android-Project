@@ -12,7 +12,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <!-- Group name -->
+        <!-- Group name: "Carpool: <group name>" -->
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/dashboard_home_group_name"
             style="@style/TextAppearance.Dashboard.Title"
@@ -22,7 +22,21 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            tools:text="Group name"
+            tools:text="Carpool: Group name"
+            tools:visibility="visible" />
+
+        <!-- Hello <user name> -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/dashboard_home_hello_user"
+            style="@style/TextAppearance.Dashboard.SectionLabel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_xs"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/dashboard_home_group_name"
+            tools:text="Hello Jane"
             tools:visibility="visible" />
 
         <!-- Today's Training section -->
@@ -34,7 +48,7 @@
             android:layout_marginTop="@dimen/spacing_md"
             android:text="@string/home_todays_training"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/dashboard_home_group_name" />
+            app:layout_constraintTop_toBottomOf="@id/dashboard_home_hello_user" />
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/dashboard_home_today_card"

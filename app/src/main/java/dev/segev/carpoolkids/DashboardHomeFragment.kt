@@ -14,6 +14,7 @@ import com.google.firebase.firestore.ListenerRegistration
 import dev.segev.carpoolkids.data.GroupRepository
 import dev.segev.carpoolkids.data.TrainingRepository
 import dev.segev.carpoolkids.data.TrainingRepositoryImpl
+import dev.segev.carpoolkids.data.UserRepository
 import dev.segev.carpoolkids.databinding.FragmentDashboardHomeBinding
 import dev.segev.carpoolkids.model.JoinRequest
 import dev.segev.carpoolkids.model.TodayTrainingUiModel
@@ -125,16 +126,30 @@ class DashboardHomeFragment : Fragment() {
     private fun loadGroupAndToday(groupId: String) {
         if (_binding == null) return
         binding.dashboardHomeGroupName.visibility = View.GONE
+        binding.dashboardHomeHelloUser.visibility = View.GONE
         binding.dashboardHomeTodayCard.visibility = View.GONE
         binding.dashboardHomeNoTrainingMessage.visibility = View.GONE
 
         GroupRepository.getGroupById(groupId) { group, _ ->
             if (_binding == null) return@getGroupById
             if (group != null) {
-                binding.dashboardHomeGroupName.text = group.name
+                binding.dashboardHomeGroupName.text = getString(R.string.carpool_header_format, group.name)
                 binding.dashboardHomeGroupName.visibility = View.VISIBLE
+                loadCurrentUserGreeting()
                 loadTodayTraining(groupId)
             }
+        }
+    }
+
+    private fun loadCurrentUserGreeting() {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        UserRepository.getUser(uid) { profile, _ ->
+            if (_binding == null) return@getUser
+            val name = profile?.displayName?.takeIf { it.isNotBlank() }
+                ?: profile?.email?.takeIf { it.isNotBlank() }
+                ?: getString(R.string.join_request_requester_unknown)
+            binding.dashboardHomeHelloUser.text = getString(R.string.home_hello_user, name)
+            binding.dashboardHomeHelloUser.visibility = View.VISIBLE
         }
     }
 

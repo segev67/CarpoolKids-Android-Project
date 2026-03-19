@@ -70,6 +70,8 @@
     <string name="leave_carpool_warning_title">Leave carpool</string>
     <string name="leave_carpool_no_future_drives">You have no upcoming drives in this carpool. Leaving will remove you from this carpool.</string>
     <string name="leave_carpool_with_future_drives">You are scheduled to drive on %1$d upcoming rides in this carpool. Leaving will cancel these drives and may leave kids without a ride.</string>
+    <string name="leave_carpool_child_no_future_rides">You have no upcoming rides in this carpool. Leaving will remove you from this carpool.</string>
+    <string name="leave_carpool_child_with_future_rides">You have %1$d upcoming rides in this carpool.\nLeaving will cancel these rides.\nYour parent and other kids in the carpool will not be affected.</string>
     <string name="leave_carpool_cancel_error">Could not cancel your drives. Try again.</string>
     <string name="leave_carpool_load_drives_error">Could not load your upcoming drives. Try again.</string>
     <string name="leave_carpool_left_success">You left the carpool.</string>

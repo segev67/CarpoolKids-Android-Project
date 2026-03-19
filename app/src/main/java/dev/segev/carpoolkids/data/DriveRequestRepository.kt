@@ -76,4 +76,13 @@ object DriveRequestRepository {
     ) {
         FirestoreManager.getInstance().getAcceptedDriveRequestsForGroup(groupId, acceptedByUid, callback)
     }
+
+    /** Batch get drive requests for a requester in a group (child self-leave). */
+    fun getDriveRequestsForGroupAndRequester(
+        groupId: String,
+        requesterUid: String,
+        callback: (List<DriveRequest>, String?) -> Unit
+    ) {
+        FirestoreManager.getInstance().getDriveRequestsForGroupAndRequester(groupId, requesterUid, callback)
+    }
 }

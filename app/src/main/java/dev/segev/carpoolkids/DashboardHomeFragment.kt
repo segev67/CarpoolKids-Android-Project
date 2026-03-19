@@ -73,7 +73,10 @@ class DashboardHomeFragment : Fragment() {
             if (groupId.isBlank()) return@setOnClickListener
             val uid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
             if (uid.isBlank()) return@setOnClickListener
-            requestParentLeaveCarpool(groupId, uid)
+            when (currentUserRole) {
+                Constants.UserRole.CHILD -> requestChildLeaveCarpool(groupId, uid)
+                else -> requestParentLeaveCarpool(groupId, uid)
+            }
         }
         binding.dashboardHomeBtnSignOut.setOnClickListener {
             AuthUI.getInstance().signOut(requireContext()).addOnCompleteListener {
@@ -174,7 +177,7 @@ class DashboardHomeFragment : Fragment() {
             binding.dashboardHomeHelloUser.text = getString(R.string.home_hello_user, name)
             binding.dashboardHomeHelloUser.visibility = View.VISIBLE
             binding.dashboardHomeBtnLeaveCarpool.visibility =
-                if (currentUserRole == Constants.UserRole.PARENT) View.VISIBLE else View.GONE
+                if (currentUserRole == Constants.UserRole.PARENT || currentUserRole == Constants.UserRole.CHILD) View.VISIBLE else View.GONE
         }
     }
 
@@ -202,6 +205,127 @@ class DashboardHomeFragment : Fragment() {
                     practiceStartMillis(practice) > now
                 }
                 showLeaveDialog(groupId, parentUid, futureRequests)
+            }
+        }
+    }
+
+    private fun requestChildLeaveCarpool(groupId: String, childUid: String) {
+        binding.dashboardHomeBtnLeaveCarpool.isEnabled = false
+        val now = System.currentTimeMillis()
+
+        DriveRequestRepository.getDriveRequestsForGroupAndRequester(groupId, childUid) { requests, err ->
+            if (_binding == null) return@getDriveRequestsForGroupAndRequester
+            if (err != null) {
+                binding.dashboardHomeBtnLeaveCarpool.isEnabled = true
+                Snackbar.make(binding.root, err, Snackbar.LENGTH_LONG).show()
+                return@getDriveRequestsForGroupAndRequester
+            }
+
+            val activeRequests = requests.filter {
+                it.status == DriveRequest.STATUS_PENDING || it.status == DriveRequest.STATUS_APPROVED
+            }
+            if (activeRequests.isEmpty()) {
+                showChildLeaveDialog(groupId, childUid, emptyList())
+                return@getDriveRequestsForGroupAndRequester
+            }
+
+            val practiceIds = activeRequests.map { it.practiceId }.distinct()
+            PracticeRepository.getPracticesByIds(practiceIds) { practicesById ->
+                if (_binding == null) return@getPracticesByIds
+                val futureRequests = activeRequests.filter { req ->
+                    val practice = practicesById[req.practiceId] ?: return@filter false
+                    practiceStartMillis(practice) > now
+                }
+                showChildLeaveDialog(groupId, childUid, futureRequests)
+            }
+        }
+    }
+
+    private fun showChildLeaveDialog(
+        groupId: String,
+        childUid: String,
+        futureRequests: List<DriveRequest>
+    ) {
+        val msg = if (futureRequests.isEmpty()) {
+            getString(R.string.leave_carpool_child_no_future_rides)
+        } else {
+            getString(R.string.leave_carpool_child_with_future_rides, futureRequests.size)
+        }
+        AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.leave_carpool_warning_title))
+            .setMessage(msg)
+            .setPositiveButton(getString(R.string.leave_carpool)) { _, _ ->
+                applyChildLeave(groupId, childUid, futureRequests)
+            }
+            .setNegativeButton(android.R.string.cancel) { _, _ ->
+                if (_binding != null) binding.dashboardHomeBtnLeaveCarpool.isEnabled = true
+            }
+            .show()
+    }
+
+    private fun applyChildLeave(
+        groupId: String,
+        childUid: String,
+        futureRequests: List<DriveRequest>
+    ) {
+        if (futureRequests.isEmpty()) {
+            GroupRepository.leaveGroup(groupId, childUid) { ok, err ->
+                if (_binding == null) return@leaveGroup
+                binding.dashboardHomeBtnLeaveCarpool.isEnabled = true
+                if (!ok) {
+                    Snackbar.make(binding.root, err ?: getString(R.string.leave_carpool_cancel_error), Snackbar.LENGTH_LONG).show()
+                    return@leaveGroup
+                }
+                navigateAfterLeave()
+            }
+            return
+        }
+
+        val done = AtomicInteger(0)
+        val allOk = AtomicBoolean(true)
+        val total = futureRequests.size
+
+        futureRequests.forEach { request ->
+            val decline = {
+                DriveRequestRepository.declineDriveRequest(request, childUid) { okDecline, _ ->
+                    if (_binding == null) return@declineDriveRequest
+                    if (!okDecline) allOk.set(false)
+                    val finished = done.incrementAndGet() >= total
+                    if (!finished) return@declineDriveRequest
+
+                    binding.dashboardHomeBtnLeaveCarpool.isEnabled = true
+                    if (!allOk.get()) {
+                        Snackbar.make(binding.root, getString(R.string.leave_carpool_cancel_error), Snackbar.LENGTH_LONG).show()
+                        return@declineDriveRequest
+                    }
+                    GroupRepository.leaveGroup(groupId, childUid) { okLeave, errLeave ->
+                        if (_binding == null) return@leaveGroup
+                        if (!okLeave) {
+                            Snackbar.make(binding.root, errLeave ?: getString(R.string.leave_carpool_cancel_error), Snackbar.LENGTH_LONG).show()
+                            return@leaveGroup
+                        }
+                        navigateAfterLeave()
+                    }
+                }
+            }
+
+            if (request.status == DriveRequest.STATUS_APPROVED) {
+                val driverToUid = if (request.direction == DriveRequest.DIRECTION_TO) "" else null
+                val driverFromUid = if (request.direction == DriveRequest.DIRECTION_FROM) "" else null
+                PracticeRepository.updatePractice(
+                    request.practiceId,
+                    startTime = null,
+                    endTime = null,
+                    location = null,
+                    driverToUid = driverToUid,
+                    driverFromUid = driverFromUid
+                ) { okPractice, _ ->
+                    if (_binding == null) return@updatePractice
+                    if (!okPractice) allOk.set(false)
+                    decline()
+                }
+            } else {
+                decline()
             }
         }
     }

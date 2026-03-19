@@ -731,6 +731,36 @@ class FirestoreManager private constructor(context: Context) {
             }
     }
 
+    /**
+     * Drive requests for a specific requester in a group.
+     * Used for child "Leave carpool" (cancel your own future rides).
+     */
+    fun getDriveRequestsForGroupAndRequester(
+        groupId: String,
+        requesterUid: String,
+        callback: (List<DriveRequest>, String?) -> Unit
+    ) {
+        if (groupId.isBlank() || requesterUid.isBlank()) {
+            callback(emptyList(), "Invalid group or user")
+            return
+        }
+        db.collection(Constants.Firestore.COLLECTION_DRIVE_REQUESTS)
+            .whereEqualTo("groupId", groupId)
+            .whereEqualTo("requesterUid", requesterUid)
+            .limit(100)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val list = snapshot?.documents
+                    ?.mapNotNull { documentToDriveRequest(it) }
+                    ?.sortedWith(compareBy<DriveRequest> { it.practiceDateMillis }.thenBy { it.createdAt ?: 0L })
+                    ?: emptyList()
+                callback(list, null)
+            }
+            .addOnFailureListener { e ->
+                callback(emptyList(), e.message ?: "Failed to load drive requests")
+            }
+    }
+
     /** Real-time listener for drive requests of a group. All group members see the same list. */
     fun listenToDriveRequestsForGroup(groupId: String, callback: (List<DriveRequest>) -> Unit): ListenerRegistration {
         if (groupId.isBlank()) {

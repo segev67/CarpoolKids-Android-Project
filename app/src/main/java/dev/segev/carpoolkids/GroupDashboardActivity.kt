@@ -166,6 +166,13 @@ class GroupDashboardActivity : AppCompatActivity(), DashboardHomeListener {
         launcherCreateJoin.launch(intent)
     }
 
+    override fun onLeaveCarpoolCompleted(nextGroupId: String) {
+        currentGroupId = nextGroupId
+        // Keep dashboard state consistent before opening Teams List chooser.
+        showHomeFragment()
+        openTeamsList()
+    }
+
     // Update current group and refresh Home fragment if visible (after Teams List or Create/Join).
     private fun reloadGroup(groupId: String) {
         currentGroupId = groupId

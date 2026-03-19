@@ -12,6 +12,11 @@ object GroupRepository {
         FirestoreManager.getInstance().getMyGroups(uid, callback)
     }
 
+    /** Removes uid from group's memberIds (self-leave). */
+    fun leaveGroup(groupId: String, uid: String, callback: (Boolean, String?) -> Unit) {
+        FirestoreManager.getInstance().removeMemberFromGroup(groupId, uid, callback)
+    }
+
     fun getGroupById(groupId: String, callback: (Group?, String?) -> Unit) {
         FirestoreManager.getInstance().getGroupById(groupId, callback)
     }

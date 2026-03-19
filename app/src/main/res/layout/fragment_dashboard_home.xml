@@ -265,6 +265,25 @@
             app:layout_constraintTop_toBottomOf="@id/dashboard_home_btn_teams_list" />
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/dashboard_home_btn_leave_carpool"
+            style="@style/Widget.CarpoolKids.Button.Outlined"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/button_margin_between"
+            android:text="@string/leave_carpool"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/dashboard_home_btn_create_join" />
+
+        <androidx.constraintlayout.widget.Barrier
+            android:id="@+id/dashboard_home_below_leave_or_create_barrier"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:barrierDirection="bottom"
+            app:constraint_referenced_ids="dashboard_home_btn_leave_carpool,dashboard_home_btn_create_join" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/dashboard_home_btn_sign_out"
             style="@style/Widget.CarpoolKids.Button"
             android:layout_width="wrap_content"
@@ -274,6 +293,6 @@
             android:text="@string/sign_out"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/dashboard_home_btn_create_join" />
+            app:layout_constraintTop_toBottomOf="@id/dashboard_home_below_leave_or_create_barrier" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.core.widget.NestedScrollView>

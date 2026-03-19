@@ -6,20 +6,30 @@ import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.snackbar.Snackbar
 import com.firebase.ui.auth.AuthUI
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ListenerRegistration
+import dev.segev.carpoolkids.data.DriveRequestRepository
 import dev.segev.carpoolkids.data.GroupRepository
+import dev.segev.carpoolkids.data.PracticeRepository
 import dev.segev.carpoolkids.data.TrainingRepository
 import dev.segev.carpoolkids.data.TrainingRepositoryImpl
 import dev.segev.carpoolkids.data.UserRepository
 import dev.segev.carpoolkids.databinding.FragmentDashboardHomeBinding
+import dev.segev.carpoolkids.model.DriveRequest
 import dev.segev.carpoolkids.model.JoinRequest
+import dev.segev.carpoolkids.model.Practice
 import dev.segev.carpoolkids.model.TodayTrainingUiModel
 import dev.segev.carpoolkids.ui.home.MyJoinRequestsAdapter
 import dev.segev.carpoolkids.ui.home.MyRequestRow
+import dev.segev.carpoolkids.utilities.Constants
+import java.util.Calendar
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Home tab of the Group Dashboard: group name, today's training (if any),
@@ -33,6 +43,8 @@ class DashboardHomeFragment : Fragment() {
     private val trainingRepository: TrainingRepository = TrainingRepositoryImpl
     private val myRequestsAdapter = MyJoinRequestsAdapter()
     private var myRequestsListener: ListenerRegistration? = null
+    private var currentUserRole: String = ""
+    private var activeGroupId: String = ""
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -45,15 +57,23 @@ class DashboardHomeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val groupId = arguments?.getString(ARG_GROUP_ID).orEmpty()
-        if (groupId.isNotEmpty()) {
-            loadGroupAndToday(groupId)
+        activeGroupId = arguments?.getString(ARG_GROUP_ID).orEmpty()
+        binding.dashboardHomeBtnLeaveCarpool.visibility = View.GONE
+        if (activeGroupId.isNotEmpty()) {
+            loadGroupAndToday(activeGroupId)
         }
         binding.dashboardHomeBtnTeamsList.setOnClickListener {
             (activity as? DashboardHomeListener)?.openTeamsList()
         }
         binding.dashboardHomeBtnCreateJoin.setOnClickListener {
             (activity as? DashboardHomeListener)?.openCreateJoin()
+        }
+        binding.dashboardHomeBtnLeaveCarpool.setOnClickListener {
+            val groupId = activeGroupId
+            if (groupId.isBlank()) return@setOnClickListener
+            val uid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+            if (uid.isBlank()) return@setOnClickListener
+            requestParentLeaveCarpool(groupId, uid)
         }
         binding.dashboardHomeBtnSignOut.setOnClickListener {
             AuthUI.getInstance().signOut(requireContext()).addOnCompleteListener {
@@ -119,11 +139,13 @@ class DashboardHomeFragment : Fragment() {
      * with a new group id. Reloads group name and today's training for that group.
      */
     fun refreshWithGroup(groupId: String) {
+        activeGroupId = groupId
         arguments = (arguments ?: Bundle()).apply { putString(ARG_GROUP_ID, groupId) }
         loadGroupAndToday(groupId)
     }
 
     private fun loadGroupAndToday(groupId: String) {
+        activeGroupId = groupId
         if (_binding == null) return
         binding.dashboardHomeGroupName.visibility = View.GONE
         binding.dashboardHomeHelloUser.visibility = View.GONE
@@ -148,9 +170,149 @@ class DashboardHomeFragment : Fragment() {
             val name = profile?.displayName?.takeIf { it.isNotBlank() }
                 ?: profile?.email?.takeIf { it.isNotBlank() }
                 ?: getString(R.string.join_request_requester_unknown)
+            currentUserRole = profile?.role.orEmpty()
             binding.dashboardHomeHelloUser.text = getString(R.string.home_hello_user, name)
             binding.dashboardHomeHelloUser.visibility = View.VISIBLE
+            binding.dashboardHomeBtnLeaveCarpool.visibility =
+                if (currentUserRole == Constants.UserRole.PARENT) View.VISIBLE else View.GONE
         }
+    }
+
+    private fun requestParentLeaveCarpool(groupId: String, parentUid: String) {
+        binding.dashboardHomeBtnLeaveCarpool.isEnabled = false
+        val now = System.currentTimeMillis()
+
+        DriveRequestRepository.getAcceptedDriveRequestsForGroup(groupId, parentUid) { requests, err ->
+            if (_binding == null) return@getAcceptedDriveRequestsForGroup
+            if (err != null) {
+                binding.dashboardHomeBtnLeaveCarpool.isEnabled = true
+                Snackbar.make(binding.root, err, Snackbar.LENGTH_LONG).show()
+                return@getAcceptedDriveRequestsForGroup
+            }
+            if (requests.isEmpty()) {
+                showLeaveDialog(groupId, parentUid, emptyList())
+                return@getAcceptedDriveRequestsForGroup
+            }
+            val practiceIds = requests.map { it.practiceId }.distinct()
+            PracticeRepository.getPracticesByIds(practiceIds) { practicesById ->
+                if (_binding == null) return@getPracticesByIds
+                val futureRequests = requests.filter { req ->
+                    if (req.status != DriveRequest.STATUS_APPROVED) return@filter false
+                    val practice = practicesById[req.practiceId] ?: return@filter false
+                    practiceStartMillis(practice) > now
+                }
+                showLeaveDialog(groupId, parentUid, futureRequests)
+            }
+        }
+    }
+
+    private fun showLeaveDialog(
+        groupId: String,
+        parentUid: String,
+        futureApprovedRequests: List<DriveRequest>
+    ) {
+        val msg = if (futureApprovedRequests.isEmpty()) {
+            getString(R.string.leave_carpool_no_future_drives)
+        } else {
+            getString(R.string.leave_carpool_with_future_drives, futureApprovedRequests.size)
+        }
+        AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.leave_carpool_warning_title))
+            .setMessage(msg)
+            .setPositiveButton(getString(R.string.leave_carpool)) { _, _ ->
+                applyParentLeave(groupId, parentUid, futureApprovedRequests)
+            }
+            .setNegativeButton(android.R.string.cancel) { _, _ ->
+                if (_binding != null) {
+                    binding.dashboardHomeBtnLeaveCarpool.isEnabled = true
+                }
+            }
+            .show()
+    }
+
+    private fun applyParentLeave(
+        groupId: String,
+        parentUid: String,
+        futureApprovedRequests: List<DriveRequest>
+    ) {
+        if (futureApprovedRequests.isEmpty()) {
+            GroupRepository.leaveGroup(groupId, parentUid) { ok, err ->
+                if (_binding == null) return@leaveGroup
+                binding.dashboardHomeBtnLeaveCarpool.isEnabled = true
+                if (!ok) {
+                    Snackbar.make(binding.root, err ?: getString(R.string.leave_carpool_cancel_error), Snackbar.LENGTH_LONG).show()
+                    return@leaveGroup
+                }
+                navigateAfterLeave()
+            }
+            return
+        }
+
+        val done = AtomicInteger(0)
+        val allOk = AtomicBoolean(true)
+        val total = futureApprovedRequests.size
+
+        futureApprovedRequests.forEach { request ->
+            val driverToUid = if (request.direction == DriveRequest.DIRECTION_TO) "" else null
+            val driverFromUid = if (request.direction == DriveRequest.DIRECTION_FROM) "" else null
+
+            PracticeRepository.updatePractice(
+                request.practiceId,
+                startTime = null,
+                endTime = null,
+                location = null,
+                driverToUid = driverToUid,
+                driverFromUid = driverFromUid
+            ) { okPractice, _ ->
+                if (_binding == null) return@updatePractice
+                DriveRequestRepository.declineDriveRequest(request, parentUid) { okDecline, _ ->
+                    if (!okPractice || !okDecline) allOk.set(false)
+                    val finished = done.incrementAndGet() >= total
+                    if (!finished) return@declineDriveRequest
+                    binding.dashboardHomeBtnLeaveCarpool.isEnabled = true
+                    if (!allOk.get()) {
+                        Snackbar.make(binding.root, getString(R.string.leave_carpool_cancel_error), Snackbar.LENGTH_LONG).show()
+                        return@declineDriveRequest
+                    }
+                    GroupRepository.leaveGroup(groupId, parentUid) { okLeave, errLeave ->
+                        if (_binding == null) return@leaveGroup
+                        if (!okLeave) {
+                            Snackbar.make(binding.root, errLeave ?: getString(R.string.leave_carpool_cancel_error), Snackbar.LENGTH_LONG).show()
+                            return@leaveGroup
+                        }
+                        navigateAfterLeave()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun navigateAfterLeave() {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+        if (uid.isBlank()) return
+        GroupRepository.getMyGroups(uid) { groups, err ->
+            if (_binding == null) return@getMyGroups
+            if (err != null) {
+                Snackbar.make(binding.root, err, Snackbar.LENGTH_LONG).show()
+                return@getMyGroups
+            }
+            val nextGroupId = groups.firstOrNull()?.id.orEmpty()
+            activeGroupId = nextGroupId
+            (activity as? DashboardHomeListener)?.onLeaveCarpoolCompleted(nextGroupId)
+        }
+    }
+
+    private fun practiceStartMillis(practice: Practice): Long {
+        val parts = practice.startTime.split(":")
+        if (parts.size < 2) return practice.dateMillis
+        val hour = parts[0].toIntOrNull() ?: 0
+        val minute = parts[1].toIntOrNull() ?: 0
+        val cal = Calendar.getInstance().apply { timeInMillis = practice.dateMillis }
+        cal.set(Calendar.HOUR_OF_DAY, hour)
+        cal.set(Calendar.MINUTE, minute)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        return cal.timeInMillis
     }
 
     // Load today's training; show card or "Rest day" message.
@@ -209,4 +371,5 @@ class DashboardHomeFragment : Fragment() {
 interface DashboardHomeListener {
     fun openTeamsList()
     fun openCreateJoin()
+    fun onLeaveCarpoolCompleted(nextGroupId: String)
 }

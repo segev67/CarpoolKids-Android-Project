@@ -212,6 +212,19 @@ class FirestoreManager private constructor(context: Context) {
             .addOnFailureListener { e -> callback(false, e.message ?: "Failed to join group") }
     }
 
+    /** Removes uid from memberIds (self-leave). */
+    fun removeMemberFromGroup(groupId: String, uid: String, callback: (Boolean, String?) -> Unit) {
+        if (groupId.isBlank() || uid.isBlank()) {
+            callback(false, "Invalid group or user")
+            return
+        }
+        db.collection(Constants.Firestore.COLLECTION_GROUPS)
+            .document(groupId)
+            .update("memberIds", FieldValue.arrayRemove(uid))
+            .addOnSuccessListener { callback(true, null) }
+            .addOnFailureListener { e -> callback(false, e.message ?: "Failed to leave group") }
+    }
+
     /** Updates the group invite code (PARENT-only use). */
     fun updateGroupInviteCode(groupId: String, newInviteCode: String, callback: (Boolean, String?) -> Unit) {
         if (groupId.isBlank() || newInviteCode.isBlank()) {
@@ -686,6 +699,36 @@ class FirestoreManager private constructor(context: Context) {
             )
             .addOnSuccessListener { callback(true, null) }
             .addOnFailureListener { e -> callback(false, e.message ?: "Failed to decline") }
+    }
+
+    /**
+     * Drive requests by driver (acceptedByUid).
+     * Used for "Leave carpool": we need all future approved drives for that parent.
+     */
+    fun getAcceptedDriveRequestsForGroup(
+        groupId: String,
+        acceptedByUid: String,
+        callback: (List<DriveRequest>, String?) -> Unit
+    ) {
+        if (groupId.isBlank() || acceptedByUid.isBlank()) {
+            callback(emptyList(), "Invalid group or user")
+            return
+        }
+        db.collection(Constants.Firestore.COLLECTION_DRIVE_REQUESTS)
+            .whereEqualTo("groupId", groupId)
+            .whereEqualTo("acceptedByUid", acceptedByUid)
+            .limit(100)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val list = snapshot?.documents
+                    ?.mapNotNull { documentToDriveRequest(it) }
+                    ?.sortedWith(compareBy<DriveRequest> { it.practiceDateMillis }.thenBy { it.createdAt ?: 0L })
+                    ?: emptyList()
+                callback(list, null)
+            }
+            .addOnFailureListener { e ->
+                callback(emptyList(), e.message ?: "Failed to load drive requests")
+            }
     }
 
     /** Real-time listener for drive requests of a group. All group members see the same list. */

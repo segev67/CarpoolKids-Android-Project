@@ -15,7 +15,7 @@
     <string name="role_child">Child</string>
     <string name="choose_role_save_error">Could not save. Please try again.</string>
     <!-- Create / Join group -->
-    <string name="create_join_group_title">Create/join a group</string>
+    <string name="create_join_group_title">Create/join a carpool</string>
     <string name="create_group">Create a group</string>
     <string name="join_group">Join with invite code</string>
     <string name="group_name_hint">Group name</string>
@@ -65,6 +65,14 @@
     <string name="home_join_new_team">Join New Team</string>
     <!-- Today\'s Training -->
     <string name="home_todays_training">Today\'s Practices</string>
+    <!-- Leave carpool (Phase 2: parent leaves) -->
+    <string name="leave_carpool">Leave carpool</string>
+    <string name="leave_carpool_warning_title">Leave carpool</string>
+    <string name="leave_carpool_no_future_drives">You have no upcoming drives in this carpool. Leaving will remove you from this carpool.</string>
+    <string name="leave_carpool_with_future_drives">You are scheduled to drive on %1$d upcoming rides in this carpool. Leaving will cancel these drives and may leave kids without a ride.</string>
+    <string name="leave_carpool_cancel_error">Could not cancel your drives. Try again.</string>
+    <string name="leave_carpool_load_drives_error">Could not load your upcoming drives. Try again.</string>
+    <string name="leave_carpool_left_success">You left the carpool.</string>
     <string name="home_training_time_label">Time</string>
     <string name="home_training_location_label">Location</string>
     <string name="home_training_transport_label">Transportation</string>
@@ -74,7 +82,7 @@
     <string name="home_today_day_off">Rest day, no practice today.</string>
     <string name="home_hello_user">Hello %1$s</string>
     <string name="btn_teams_list">Teams List</string>
-    <string name="btn_create_join_group">Create/Join Group</string>
+    <string name="btn_create_join_group">Create/Join Carpool</string>
     <string name="coming_soon">Coming soon</string>
     <string name="dashboard_schedule_title">Weekly Practices</string>
     <string name="schedule_no_practices">No practices this week. Tap Add practice to add one.</string>
@@ -172,7 +180,7 @@
     <string name="invite_code_no_group">You\'re not in a group yet. Create or join a group to start inviting friends.</string>
     <!-- My Requests (Home) -->
     <string name="my_requests_section_title">My Requests</string>
-    <string name="my_requests_empty">No join requests yet. Use Create/Join Group to request to join a team.</string>
+    <string name="my_requests_empty">No join requests. Use Create/Join Carpool to request to join a carpool.</string>
     <string name="status_pending">PENDING</string>
     <string name="status_approved">APPROVED</string>
     <string name="status_declined">DECLINED</string>

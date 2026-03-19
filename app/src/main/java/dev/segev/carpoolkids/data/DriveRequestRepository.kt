@@ -67,4 +67,13 @@ object DriveRequestRepository {
     /** Real-time listener for drive requests of a group. Remove the returned registration in onDestroyView. */
     fun listenToDriveRequestsForGroup(groupId: String, callback: (List<DriveRequest>) -> Unit): ListenerRegistration =
         FirestoreManager.getInstance().listenToDriveRequestsForGroup(groupId, callback)
+
+    /** Batch get drive requests where this driver is the acceptedByUid (used for leave flow). */
+    fun getAcceptedDriveRequestsForGroup(
+        groupId: String,
+        acceptedByUid: String,
+        callback: (List<DriveRequest>, String?) -> Unit
+    ) {
+        FirestoreManager.getInstance().getAcceptedDriveRequestsForGroup(groupId, acceptedByUid, callback)
+    }
 }

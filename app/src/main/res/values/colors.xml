@@ -28,4 +28,5 @@
     <color name="status_approve_green">#4CAF50</color>
     <color name="status_block_red">#E53935</color>
     <color name="status_pending_orange">#FF9800</color>
+    <color name="status_canceled_neutral">#607D8B</color>
 </resources>

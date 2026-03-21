@@ -138,7 +138,7 @@ class DriversRequestsFragment : Fragment() {
                 return@getPracticesForWeek
             }
             val now = System.currentTimeMillis()
-            val futurePractices = practices.filter { practiceStartMillis(it) > now }
+            val futurePractices = practices.filter { practiceStartMillis(it) > now && !it.canceled }
             if (futurePractices.isEmpty()) {
                 Snackbar.make(binding.root, getString(R.string.drive_requests_no_practices), Snackbar.LENGTH_LONG).show()
                 return@getPracticesForWeek
@@ -210,6 +210,7 @@ class DriversRequestsFragment : Fragment() {
                 val msg = when (errorMessage) {
                     "Slot already taken" -> getString(R.string.drive_request_slot_taken)
                     "A request is already open for this" -> getString(R.string.drive_request_already_open)
+                    "Practice was canceled" -> getString(R.string.practice_canceled_banner)
                     else -> errorMessage ?: getString(R.string.create_join_error)
                 }
                 Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).show()

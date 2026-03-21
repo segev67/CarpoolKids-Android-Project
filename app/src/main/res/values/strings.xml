@@ -201,6 +201,8 @@
     <string name="status_pending">PENDING</string>
     <string name="status_approved">APPROVED</string>
     <string name="status_declined">DECLINED</string>
+    <string name="status_canceled">Canceled</string>
+    <string name="drive_request_closed_practice_canceled">Closed — practice was canceled</string>
     <string name="status_blocked">BLOCKED</string>
     <!-- Join Requests screen (Phase 4) -->
     <string name="btn_approve">Approve</string>

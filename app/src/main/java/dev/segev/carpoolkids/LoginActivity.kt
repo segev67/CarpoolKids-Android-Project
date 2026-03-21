@@ -31,7 +31,7 @@ class LoginActivity : AppCompatActivity() {
 
         val signInIntent = AuthUI.getInstance()
             .createSignInIntentBuilder()
-            .setLogo(R.drawable.ic_launcher_foreground)
+            .setLogo(R.drawable.ic_carpool_logo_app)
             .setAvailableProviders(providers)
             .setTheme(R.style.Theme_CarpoolKids)
             .build()

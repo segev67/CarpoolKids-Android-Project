@@ -56,11 +56,11 @@
     <string name="session_tue">Tue</string>
     <string name="session_thu">Thu</string>
     <string name="example_group_name">Group name</string>
-    <!-- Home / My Teams -->
-    <string name="home_my_teams">My Teams</string>
-    <string name="home_my_teams_subtitle">Your connected groups.</string>
+    <!-- Home / My Carpools -->
+    <string name="home_my_teams">My Carpools</string>
+    <string name="home_my_teams_subtitle">Your connected carpools.</string>
     <string name="home_members_count">%d members</string>
-    <string name="home_no_teams">You’re not in any team yet.</string>
+    <string name="home_no_teams">You are not in any carpool yet.</string>
     <string name="btn_back_to_home">Back to Home</string>
     <string name="home_join_new_team">Join New Team</string>
     <!-- Today\'s Training -->
@@ -89,7 +89,7 @@
     <string name="home_no_training_today">No practice today</string>
     <string name="home_today_day_off">Rest day, no practice today.</string>
     <string name="home_hello_user">Hello %1$s</string>
-    <string name="btn_teams_list">Teams List</string>
+    <string name="btn_teams_list">Carpools List</string>
     <string name="btn_create_join_group">Create/Join Carpool</string>
     <string name="coming_soon">Coming soon</string>
     <string name="dashboard_schedule_title">Weekly Practices</string>

@@ -65,6 +65,9 @@ class DashboardHomeFragment : Fragment() {
         binding.dashboardHomeBtnLeaveCarpool.visibility = View.GONE
         if (activeGroupId.isNotEmpty()) {
             loadGroupAndToday(activeGroupId)
+        } else {
+            // No group selected: still show "Hello <name>" (loadGroupAndToday is not called).
+            loadCurrentUserGreeting()
         }
         binding.dashboardHomeBtnTeamsList.setOnClickListener {
             (activity as? DashboardHomeListener)?.openTeamsList()
@@ -159,6 +162,11 @@ class DashboardHomeFragment : Fragment() {
         binding.dashboardHomeTodayCard.visibility = View.GONE
         binding.dashboardHomeNoTrainingMessage.visibility = View.GONE
 
+        if (groupId.isBlank()) {
+            loadCurrentUserGreeting()
+            return
+        }
+
         GroupRepository.getGroupById(groupId) { group, _ ->
             if (_binding == null) return@getGroupById
             if (group != null) {
@@ -166,22 +174,45 @@ class DashboardHomeFragment : Fragment() {
                 binding.dashboardHomeGroupName.visibility = View.VISIBLE
                 loadCurrentUserGreeting()
                 loadTodayTraining(groupId)
+            } else {
+                // Group id invalid or deleted: still show greeting.
+                loadCurrentUserGreeting()
             }
         }
     }
 
     private fun loadCurrentUserGreeting() {
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val auth = FirebaseAuth.getInstance()
+        val uid = auth.currentUser?.uid
+        fun applyGreeting(displayName: String, role: String) {
+            if (_binding == null) return
+            currentUserRole = role
+            binding.dashboardHomeHelloUser.text = getString(R.string.home_hello_user, displayName)
+            binding.dashboardHomeHelloUser.visibility = View.VISIBLE
+            // Leave applies only when this dashboard has a selected group (not whether user is "in a carpool" elsewhere).
+            val hasSelectedGroup = activeGroupId.isNotBlank()
+            binding.dashboardHomeBtnLeaveCarpool.visibility =
+                if (hasSelectedGroup && (currentUserRole == Constants.UserRole.PARENT || currentUserRole == Constants.UserRole.CHILD)) {
+                    View.VISIBLE
+                } else {
+                    View.GONE
+                }
+        }
+        fun fallbackNameFromAuth(): String =
+            auth.currentUser?.displayName?.takeIf { it.isNotBlank() }
+                ?: auth.currentUser?.email?.takeIf { it.isNotBlank() }
+                ?: getString(R.string.join_request_requester_unknown)
+
+        if (uid.isNullOrBlank()) {
+            applyGreeting(fallbackNameFromAuth(), currentUserRole)
+            return
+        }
         UserRepository.getUser(uid) { profile, _ ->
             if (_binding == null) return@getUser
             val name = profile?.displayName?.takeIf { it.isNotBlank() }
                 ?: profile?.email?.takeIf { it.isNotBlank() }
-                ?: getString(R.string.join_request_requester_unknown)
-            currentUserRole = profile?.role.orEmpty()
-            binding.dashboardHomeHelloUser.text = getString(R.string.home_hello_user, name)
-            binding.dashboardHomeHelloUser.visibility = View.VISIBLE
-            binding.dashboardHomeBtnLeaveCarpool.visibility =
-                if (currentUserRole == Constants.UserRole.PARENT || currentUserRole == Constants.UserRole.CHILD) View.VISIBLE else View.GONE
+                ?: fallbackNameFromAuth()
+            applyGreeting(name, profile?.role.orEmpty())
         }
     }
 

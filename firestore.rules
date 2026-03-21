@@ -2,6 +2,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Safe read of users/{uid}.role — get() throws if the document does not exist.
+    function userRole(uid) {
+      let path = /databases/$(database)/documents/users/$(uid);
+      return exists(path) ? get(path).data.role : '';
+    }
+
     // Each user can write only their own document. Any authenticated user can read
     // (for Join Requests / Blocked Users email display)
     match /users/{userId} {
@@ -63,10 +69,18 @@ service cloud.firestore {
         && resource.data.groupId != null
         && request.auth.uid in get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.memberIds
         && (
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'PARENT'
+          userRole(request.auth.uid) == 'PARENT'
           || (
-            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'CHILD'
+            userRole(request.auth.uid) == 'CHILD'
             && resource.data.requesterUid == request.auth.uid
+          )
+          // After practice is canceled (separate write), any member may mark PENDING/APPROVED → CANCELED only.
+          || (
+            resource.data.practiceId != null
+            && (resource.data.status == 'PENDING' || resource.data.status == 'APPROVED')
+            && request.resource.data.status == 'CANCELED'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+            && get(/databases/$(database)/documents/practices/$(resource.data.practiceId)).data.canceled == true
           )
         );
 

@@ -1,9 +1,11 @@
 package dev.segev.carpoolkids
 
+import android.content.DialogInterface
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
@@ -27,6 +29,8 @@ class PracticeDetailFragment : Fragment() {
     private val binding get() = _binding!!
 
     private var practice: Practice? = null
+    private var isCancelingPractice = false
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -48,6 +52,7 @@ class PracticeDetailFragment : Fragment() {
         }
 
         binding.practiceDetailSave.setOnClickListener { save(groupId) }
+        binding.practiceDetailCancelPractice.setOnClickListener { confirmCancelPractice() }
         binding.practiceDetailRequestTo.setOnClickListener { requestDrive(groupId, DriveRequest.DIRECTION_TO) }
         binding.practiceDetailRequestFrom.setOnClickListener { requestDrive(groupId, DriveRequest.DIRECTION_FROM) }
         binding.practiceDetailIllTakeTo.setOnClickListener { selfDeclare(groupId, DriveRequest.DIRECTION_TO) }
@@ -77,6 +82,19 @@ class PracticeDetailFragment : Fragment() {
         val role = arguments?.getString(ARG_ROLE).orEmpty()
         val isParent = role == Constants.UserRole.PARENT
         val currentUid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+        binding.practiceDetailCanceledBanner.visibility = if (p.canceled) View.VISIBLE else View.GONE
+
+        val editable = !p.canceled
+        binding.practiceDetailStartTime.isEnabled = editable
+        binding.practiceDetailEndTime.isEnabled = editable
+        binding.practiceDetailLocation.isEnabled = editable
+        binding.practiceDetailSave.isEnabled = editable
+        binding.practiceDetailSave.alpha = if (editable) 1f else 0.5f
+
+        binding.practiceDetailCancelPractice.visibility =
+            if (isParent && !p.canceled) View.VISIBLE else View.GONE
+        binding.practiceDetailCancelPractice.isEnabled = !isCancelingPractice
+
         binding.practiceDetailDay.text = formatDayOfWeek(p.dateMillis)
         binding.practiceDetailDate.text = formatDate(p.dateMillis)
         binding.practiceDetailStartTime.setText(p.startTime)
@@ -85,12 +103,69 @@ class PracticeDetailFragment : Fragment() {
         val noDriver = getString(R.string.schedule_no_driver)
         binding.practiceDetailDriverToValue.text = noDriver
         binding.practiceDetailDriverFromValue.text = noDriver
+
+        if (p.canceled) {
+            binding.practiceDetailRequestTo.visibility = View.GONE
+            binding.practiceDetailRequestFrom.visibility = View.GONE
+            binding.practiceDetailIllTakeTo.visibility = View.GONE
+            binding.practiceDetailIllTakeFrom.visibility = View.GONE
+            binding.practiceDetailCancelTo.visibility = View.GONE
+            binding.practiceDetailCancelFrom.visibility = View.GONE
+            return
+        }
+
         binding.practiceDetailRequestTo.visibility = if (p.driverToUid.isNullOrBlank()) View.VISIBLE else View.GONE
         binding.practiceDetailRequestFrom.visibility = if (p.driverFromUid.isNullOrBlank()) View.VISIBLE else View.GONE
         binding.practiceDetailIllTakeTo.visibility = if (p.driverToUid.isNullOrBlank() && isParent) View.VISIBLE else View.GONE
         binding.practiceDetailIllTakeFrom.visibility = if (p.driverFromUid.isNullOrBlank() && isParent) View.VISIBLE else View.GONE
         binding.practiceDetailCancelTo.visibility = if (p.driverToUid == currentUid) View.VISIBLE else View.GONE
         binding.practiceDetailCancelFrom.visibility = if (p.driverFromUid == currentUid) View.VISIBLE else View.GONE
+    }
+
+    private fun confirmCancelPractice() {
+        val p = practice ?: return
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        if (arguments?.getString(ARG_ROLE) != Constants.UserRole.PARENT) return
+        if (p.canceled || isCancelingPractice) return
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.practice_cancel_dialog_title)
+            .setMessage(R.string.practice_cancel_dialog_message)
+            .setPositiveButton(R.string.practice_cancel_confirm_button) { _: DialogInterface, _: Int ->
+                // p.canceled already false here (guard above); re-check mutable practice if state could change
+                if (practice?.canceled == true || isCancelingPractice) return@setPositiveButton
+                isCancelingPractice = true
+                binding.practiceDetailCancelPractice.isEnabled = false
+                UserRepository.getUser(uid) { profile, profileErr ->
+                    if (_binding == null) return@getUser
+                    if (profile?.role != Constants.UserRole.PARENT) {
+                        isCancelingPractice = false
+                        binding.practiceDetailCancelPractice.isEnabled = true
+                        val msg = profileErr
+                            ?: getString(R.string.practice_cancel_not_parent_profile)
+                        Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).show()
+                        return@getUser
+                    }
+                    PracticeRepository.cancelPractice(p.id, uid, null) { success, err ->
+                        if (_binding == null) return@cancelPractice
+                        isCancelingPractice = false
+                        if (success) {
+                            Snackbar.make(binding.root, R.string.practice_canceled_success, Snackbar.LENGTH_SHORT).show()
+                            requireActivity().onBackPressedDispatcher.onBackPressed()
+                        } else {
+                            binding.practiceDetailCancelPractice.isEnabled = true
+                            val msg = when {
+                                err == "PERMISSION_DENIED" || err?.contains("PERMISSION_DENIED", ignoreCase = true) == true ->
+                                    getString(R.string.practice_cancel_permission_denied)
+                                err == "Practice already canceled" -> getString(R.string.practice_already_canceled)
+                                else -> err ?: getString(R.string.create_join_error)
+                            }
+                            Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun cancelDrive(groupId: String, direction: String) {
@@ -136,6 +211,7 @@ class PracticeDetailFragment : Fragment() {
 
     private fun selfDeclare(groupId: String, direction: String) {
         val p = practice ?: return
+        if (p.canceled) return
         val uid = FirebaseAuth.getInstance().currentUser?.uid
         if (uid.isNullOrBlank()) {
             Snackbar.make(binding.root, getString(R.string.create_join_error), Snackbar.LENGTH_SHORT).show()
@@ -189,6 +265,7 @@ class PracticeDetailFragment : Fragment() {
                 val msg = when (errorMessage) {
                     "Slot already taken" -> getString(R.string.drive_request_slot_taken)
                     "A request is already open for this" -> getString(R.string.drive_request_already_open)
+                    "Practice was canceled" -> getString(R.string.practice_canceled_banner)
                     else -> errorMessage ?: getString(R.string.create_join_error)
                 }
                 Snackbar.make(binding.root, msg, Snackbar.LENGTH_LONG).show()
@@ -249,6 +326,7 @@ class PracticeDetailFragment : Fragment() {
 
     private fun save(groupId: String) {
         val p = practice ?: return
+        if (p.canceled) return
         val startTime = binding.practiceDetailStartTime.text?.toString()?.trim().orEmpty()
         val endTime = binding.practiceDetailEndTime.text?.toString()?.trim().orEmpty()
         val location = binding.practiceDetailLocation.text?.toString()?.trim().orEmpty()

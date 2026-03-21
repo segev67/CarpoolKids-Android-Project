@@ -6,6 +6,7 @@ import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Transaction
 import dev.segev.carpoolkids.model.DriveRequest
@@ -698,9 +699,10 @@ class FirestoreManager private constructor(context: Context) {
     }
 
     /**
-     * Cancel practice (Phase 1): sets [Practice.canceled], clears TO/FROM drivers,
-     * and sets all PENDING/APPROVED [drive_requests] for this practice to [DriveRequest.STATUS_CANCELED].
-     * Chains batches of up to 500 writes. UI should call only for allowed roles (e.g. parent) in a later phase.
+     * Cancel practice: (1) update practice with [Practice.canceled] and clear drivers (PARENT-only in rules);
+     * (2) set PENDING/APPROVED [drive_requests] to [DriveRequest.STATUS_CANCELED] (allowed when practice is already canceled).
+     * Two phases so drive_request updates do not require the same batch as practice (avoids PERMISSION_DENIED on mixed rules).
+     * If practice is already canceled, only step (2) runs (recovery for partial failures).
      */
     fun cancelPractice(
         practiceId: String,
@@ -723,11 +725,9 @@ class FirestoreManager private constructor(context: Context) {
                     callback(false, "Invalid practice data")
                     return@addOnSuccessListener
                 }
-                if (practice.canceled) {
-                    callback(false, "Practice already canceled")
-                    return@addOnSuccessListener
-                }
+                // Must filter by groupId: rules tie reads to group membership; practiceId-only queries are rejected (PERMISSION_DENIED).
                 db.collection(Constants.Firestore.COLLECTION_DRIVE_REQUESTS)
+                    .whereEqualTo("groupId", practice.groupId)
                     .whereEqualTo("practiceId", practiceId)
                     .get()
                     .addOnSuccessListener { snap ->
@@ -735,6 +735,53 @@ class FirestoreManager private constructor(context: Context) {
                             val s = d.getString("status") ?: ""
                             s == DriveRequest.STATUS_PENDING || s == DriveRequest.STATUS_APPROVED
                         }
+                        val driveOps = toClose.map { q ->
+                            q.reference to mapOf("status" to DriveRequest.STATUS_CANCELED)
+                        }
+
+                        fun mapFirestoreFailure(e: Exception, fallback: String): String = when (e) {
+                            is FirebaseFirestoreException ->
+                                if (e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                                    "PERMISSION_DENIED"
+                                } else {
+                                    e.message ?: fallback
+                                }
+                            else -> e.message ?: fallback
+                        }
+
+                        fun commitDriveRequestBatches() {
+                            if (driveOps.isEmpty()) {
+                                callback(true, null)
+                                return
+                            }
+                            var index = 0
+                            fun commitNext() {
+                                if (index >= driveOps.size) {
+                                    callback(true, null)
+                                    return
+                                }
+                                val batch = db.batch()
+                                var count = 0
+                                while (index < driveOps.size && count < 500) {
+                                    val (ref, updates) = driveOps[index]
+                                    batch.update(ref, updates)
+                                    index++
+                                    count++
+                                }
+                                batch.commit()
+                                    .addOnSuccessListener { commitNext() }
+                                    .addOnFailureListener { e ->
+                                        callback(false, mapFirestoreFailure(e, "Failed to close drive requests"))
+                                    }
+                            }
+                            commitNext()
+                        }
+
+                        if (practice.canceled) {
+                            commitDriveRequestBatches()
+                            return@addOnSuccessListener
+                        }
+
                         val practiceUpdates = hashMapOf<String, Any>(
                             "canceled" to true,
                             "canceledAt" to FieldValue.serverTimestamp(),
@@ -745,32 +792,11 @@ class FirestoreManager private constructor(context: Context) {
                         cancelReason?.trim()?.takeIf { it.isNotEmpty() }?.let {
                             practiceUpdates["cancelReason"] = it
                         }
-                        val ops = mutableListOf<Pair<DocumentReference, Map<String, Any>>>()
-                        ops.add(practiceRef to practiceUpdates)
-                        toClose.forEach { q ->
-                            ops.add(q.reference to mapOf("status" to DriveRequest.STATUS_CANCELED))
-                        }
-                        var index = 0
-                        fun commitNext() {
-                            if (index >= ops.size) {
-                                callback(true, null)
-                                return
+                        practiceRef.update(practiceUpdates)
+                            .addOnSuccessListener { commitDriveRequestBatches() }
+                            .addOnFailureListener { e ->
+                                callback(false, mapFirestoreFailure(e, "Failed to cancel practice"))
                             }
-                            val batch = db.batch()
-                            var count = 0
-                            while (index < ops.size && count < 500) {
-                                val (ref, updates) = ops[index]
-                                batch.update(ref, updates)
-                                index++
-                                count++
-                            }
-                            batch.commit()
-                                .addOnSuccessListener { commitNext() }
-                                .addOnFailureListener { e ->
-                                    callback(false, e.message ?: "Failed to cancel practice")
-                                }
-                        }
-                        commitNext()
                     }
                     .addOnFailureListener { e ->
                         callback(false, e.message ?: "Failed to load drive requests")
@@ -792,6 +818,10 @@ class FirestoreManager private constructor(context: Context) {
         val driverFromUid = doc.getString("driverFromUid")?.takeIf { it.isNotEmpty() }
         val createdBy = doc.getString("createdBy")
         val createdAt = doc.getTimestamp("createdAt")?.toDate()?.time
+        val canceled = doc.getBoolean("canceled") == true
+        val canceledAt = doc.getTimestamp("canceledAt")?.toDate()?.time
+        val canceledByUid = doc.getString("canceledByUid")
+        val cancelReason = doc.getString("cancelReason")
         return Practice(
             id,
             groupId,
@@ -802,7 +832,11 @@ class FirestoreManager private constructor(context: Context) {
             driverToUid,
             driverFromUid,
             createdBy,
-            createdAt
+            createdAt,
+            canceled,
+            canceledAt,
+            canceledByUid,
+            cancelReason
         )
     }
 

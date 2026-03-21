@@ -122,28 +122,32 @@ class ScheduleFragment : Fragment() {
                     binding.scheduleList.visibility = View.GONE
                     adapter.submitList(emptyList())
                 }
-                practices.isEmpty() -> showEmpty()
                 else -> {
-                    binding.scheduleErrorContainer.visibility = View.GONE
-                    binding.scheduleEmpty.visibility = View.GONE
-                    val driverUids = practices.flatMap { p ->
-                        listOfNotNull(p.driverToUid, p.driverFromUid).filter { it.isNotBlank() }
-                    }.distinct()
-                    if (driverUids.isEmpty()) {
-                        adapter.setDriverNames(emptyMap())
-                        adapter.submitList(buildListWithHeaders(practices))
-                        binding.scheduleList.visibility = View.VISIBLE
+                    val visible = practices.filter { !it.canceled }
+                    if (visible.isEmpty()) {
+                        showEmpty()
                     } else {
-                        UserRepository.getUsersByIds(driverUids) { profileMap ->
-                            if (_binding == null) return@getUsersByIds
-                            val nameMap = profileMap.mapValues { (_, profile) ->
-                                profile.displayName?.takeIf { it.isNotBlank() }
-                                    ?: profile.email?.takeIf { it.isNotBlank() }
-                                    ?: getString(R.string.join_request_requester_unknown)
-                            }
-                            adapter.setDriverNames(nameMap)
-                            adapter.submitList(buildListWithHeaders(practices))
+                        binding.scheduleErrorContainer.visibility = View.GONE
+                        binding.scheduleEmpty.visibility = View.GONE
+                        val driverUids = visible.flatMap { p ->
+                            listOfNotNull(p.driverToUid, p.driverFromUid).filter { it.isNotBlank() }
+                        }.distinct()
+                        if (driverUids.isEmpty()) {
+                            adapter.setDriverNames(emptyMap())
+                            adapter.submitList(buildListWithHeaders(visible))
                             binding.scheduleList.visibility = View.VISIBLE
+                        } else {
+                            UserRepository.getUsersByIds(driverUids) { profileMap ->
+                                if (_binding == null) return@getUsersByIds
+                                val nameMap = profileMap.mapValues { (_, profile) ->
+                                    profile.displayName?.takeIf { it.isNotBlank() }
+                                        ?: profile.email?.takeIf { it.isNotBlank() }
+                                        ?: getString(R.string.join_request_requester_unknown)
+                                }
+                                adapter.setDriverNames(nameMap)
+                                adapter.submitList(buildListWithHeaders(visible))
+                                binding.scheduleList.visibility = View.VISIBLE
+                            }
                         }
                     }
                 }

@@ -23,6 +23,17 @@
             android:textStyle="bold" />
 
         <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/practice_detail_canceled_banner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_sm"
+            android:text="@string/practice_canceled_banner"
+            android:textSize="@dimen/text_section_label_size"
+            android:textColor="@color/status_pending_orange"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+        <com.google.android.material.textview.MaterialTextView
             android:id="@+id/practice_detail_day_label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -287,11 +298,20 @@
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/practice_detail_cancel_practice"
+            style="@style/Widget.CarpoolKids.Button.Outlined"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_section"
+            android:text="@string/practice_cancel_practice"
+            android:visibility="gone" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/practice_detail_save"
             style="@style/Widget.CarpoolKids.Button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/spacing_section"
+            android:layout_marginTop="@dimen/spacing_md"
             android:text="@string/btn_save" />
     </LinearLayout>
 </ScrollView>

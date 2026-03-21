@@ -120,6 +120,15 @@
     <string name="btn_save">Save</string>
     <string name="practice_saved">Practice updated</string>
     <string name="practice_load_error">Could not load practice.</string>
+    <string name="practice_canceled_banner">This practice was canceled.</string>
+    <string name="practice_cancel_practice">Cancel practice</string>
+    <string name="practice_cancel_dialog_title">Cancel this practice?</string>
+    <string name="practice_cancel_dialog_message">The whole team will see this practice as canceled. Assigned drivers (to/from) will be cleared and open drive requests for this practice will be closed.</string>
+    <string name="practice_canceled_success">Practice canceled.</string>
+    <string name="practice_already_canceled">This practice is already canceled.</string>
+    <string name="practice_cancel_confirm_button">Yes, cancel practice</string>
+    <string name="practice_cancel_permission_denied">Could not cancel (permission denied). Deploy the latest Firestore rules, and ensure your user document has role PARENT.</string>
+    <string name="practice_cancel_not_parent_profile">Only parents can cancel a practice. Your profile role must be PARENT in Firestore.</string>
     <string name="practice_detail_hint_start_time">17:00</string>
     <string name="practice_detail_hint_end_time">18:30</string>
     <string name="practice_detail_hint_location">Main Gym</string>

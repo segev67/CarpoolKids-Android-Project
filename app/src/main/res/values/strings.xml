@@ -75,6 +75,12 @@
     <string name="leave_carpool_cancel_error">Could not cancel your drives. Try again.</string>
     <string name="leave_carpool_load_drives_error">Could not load your upcoming drives. Try again.</string>
     <string name="leave_carpool_left_success">You left the carpool.</string>
+    <string name="leave_carpool_last_parent_blocked_title">Can’t leave carpool</string>
+    <string name="leave_carpool_last_parent_blocked_message">You can’t leave this carpool because you are the last parent. Ask another parent to join, or wait until all children leave the carpool.\n\nInvite code: %1$s</string>
+    <string name="leave_carpool_copy_invite_code">Copy invite code</string>
+    <string name="leave_carpool_invite_code_copied">Invite code copied</string>
+    <string name="leave_carpool_dissolved_success">Carpool removed. You left the group.</string>
+    <string name="join_group_inactive">This carpool is no longer active.</string>
     <string name="home_training_time_label">Time</string>
     <string name="home_training_location_label">Location</string>
     <string name="home_training_transport_label">Transportation</string>

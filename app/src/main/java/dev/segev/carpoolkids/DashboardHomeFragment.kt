@@ -1,5 +1,8 @@
 package dev.segev.carpoolkids
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.text.format.DateUtils
@@ -15,6 +18,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ListenerRegistration
 import dev.segev.carpoolkids.data.DriveRequestRepository
 import dev.segev.carpoolkids.data.GroupRepository
+import dev.segev.carpoolkids.data.LeaveCarpoolPolicy
 import dev.segev.carpoolkids.data.PracticeRepository
 import dev.segev.carpoolkids.data.TrainingRepository
 import dev.segev.carpoolkids.data.TrainingRepositoryImpl
@@ -183,8 +187,61 @@ class DashboardHomeFragment : Fragment() {
 
     private fun requestParentLeaveCarpool(groupId: String, parentUid: String) {
         binding.dashboardHomeBtnLeaveCarpool.isEnabled = false
-        val now = System.currentTimeMillis()
+        GroupRepository.getGroupById(groupId) { group, err ->
+            if (_binding == null) return@getGroupById
+            if (group == null || err != null) {
+                binding.dashboardHomeBtnLeaveCarpool.isEnabled = true
+                Snackbar.make(
+                    binding.root,
+                    err ?: getString(R.string.dashboard_load_error),
+                    Snackbar.LENGTH_LONG
+                ).show()
+                return@getGroupById
+            }
+            UserRepository.getUsersByIds(group.memberIds) { profiles ->
+                if (_binding == null) return@getUsersByIds
+                when (val outcome = LeaveCarpoolPolicy.evaluateParentLeave(group, profiles, parentUid)) {
+                    LeaveCarpoolPolicy.ParentLeaveOutcome.BlockedLastParentWithChildren -> {
+                        binding.dashboardHomeBtnLeaveCarpool.isEnabled = true
+                        showLastParentBlockedDialog(group.inviteCode)
+                    }
+                    LeaveCarpoolPolicy.ParentLeaveOutcome.AllowedDissolveInactive -> {
+                        loadParentFutureDrivesAndShowLeaveDialog(groupId, parentUid, deleteEntireCarpool = true)
+                    }
+                    LeaveCarpoolPolicy.ParentLeaveOutcome.AllowedLeaveNormal -> {
+                        loadParentFutureDrivesAndShowLeaveDialog(groupId, parentUid, deleteEntireCarpool = false)
+                    }
+                }
+            }
+        }
+    }
 
+    private fun showLastParentBlockedDialog(inviteCode: String) {
+        val msg = getString(R.string.leave_carpool_last_parent_blocked_message, inviteCode)
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.leave_carpool_last_parent_blocked_title)
+            .setMessage(msg)
+            .setNeutralButton(R.string.leave_carpool_copy_invite_code) { _, _ ->
+                val cm =
+                    requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                cm.setPrimaryClip(ClipData.newPlainText("invite", inviteCode))
+                Snackbar.make(
+                    binding.root,
+                    R.string.leave_carpool_invite_code_copied,
+                    Snackbar.LENGTH_SHORT
+                ).show()
+            }
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
+    /** After eligibility passes: load future approved drives, then show confirm dialog. */
+    private fun loadParentFutureDrivesAndShowLeaveDialog(
+        groupId: String,
+        parentUid: String,
+        deleteEntireCarpool: Boolean
+    ) {
+        val now = System.currentTimeMillis()
         DriveRequestRepository.getAcceptedDriveRequestsForGroup(groupId, parentUid) { requests, err ->
             if (_binding == null) return@getAcceptedDriveRequestsForGroup
             if (err != null) {
@@ -193,7 +250,7 @@ class DashboardHomeFragment : Fragment() {
                 return@getAcceptedDriveRequestsForGroup
             }
             if (requests.isEmpty()) {
-                showLeaveDialog(groupId, parentUid, emptyList())
+                showLeaveDialog(groupId, parentUid, emptyList(), deleteEntireCarpool)
                 return@getAcceptedDriveRequestsForGroup
             }
             val practiceIds = requests.map { it.practiceId }.distinct()
@@ -204,39 +261,53 @@ class DashboardHomeFragment : Fragment() {
                     val practice = practicesById[req.practiceId] ?: return@filter false
                     practiceStartMillis(practice) > now
                 }
-                showLeaveDialog(groupId, parentUid, futureRequests)
+                showLeaveDialog(groupId, parentUid, futureRequests, deleteEntireCarpool)
             }
         }
     }
 
     private fun requestChildLeaveCarpool(groupId: String, childUid: String) {
         binding.dashboardHomeBtnLeaveCarpool.isEnabled = false
-        val now = System.currentTimeMillis()
-
-        DriveRequestRepository.getDriveRequestsForGroupAndRequester(groupId, childUid) { requests, err ->
-            if (_binding == null) return@getDriveRequestsForGroupAndRequester
-            if (err != null) {
+        GroupRepository.getGroupById(groupId) { group, gErr ->
+            if (_binding == null) return@getGroupById
+            if (group == null || gErr != null) {
                 binding.dashboardHomeBtnLeaveCarpool.isEnabled = true
-                Snackbar.make(binding.root, err, Snackbar.LENGTH_LONG).show()
-                return@getDriveRequestsForGroupAndRequester
+                Snackbar.make(
+                    binding.root,
+                    gErr ?: getString(R.string.dashboard_load_error),
+                    Snackbar.LENGTH_LONG
+                ).show()
+                return@getGroupById
             }
+            val deleteEntireCarpool =
+                group.memberIds.size == 1 && group.memberIds[0] == childUid
+            val now = System.currentTimeMillis()
 
-            val activeRequests = requests.filter {
-                it.status == DriveRequest.STATUS_PENDING || it.status == DriveRequest.STATUS_APPROVED
-            }
-            if (activeRequests.isEmpty()) {
-                showChildLeaveDialog(groupId, childUid, emptyList())
-                return@getDriveRequestsForGroupAndRequester
-            }
-
-            val practiceIds = activeRequests.map { it.practiceId }.distinct()
-            PracticeRepository.getPracticesByIds(practiceIds) { practicesById ->
-                if (_binding == null) return@getPracticesByIds
-                val futureRequests = activeRequests.filter { req ->
-                    val practice = practicesById[req.practiceId] ?: return@filter false
-                    practiceStartMillis(practice) > now
+            DriveRequestRepository.getDriveRequestsForGroupAndRequester(groupId, childUid) { requests, err ->
+                if (_binding == null) return@getDriveRequestsForGroupAndRequester
+                if (err != null) {
+                    binding.dashboardHomeBtnLeaveCarpool.isEnabled = true
+                    Snackbar.make(binding.root, err, Snackbar.LENGTH_LONG).show()
+                    return@getDriveRequestsForGroupAndRequester
                 }
-                showChildLeaveDialog(groupId, childUid, futureRequests)
+
+                val activeRequests = requests.filter {
+                    it.status == DriveRequest.STATUS_PENDING || it.status == DriveRequest.STATUS_APPROVED
+                }
+                if (activeRequests.isEmpty()) {
+                    showChildLeaveDialog(groupId, childUid, emptyList(), deleteEntireCarpool)
+                    return@getDriveRequestsForGroupAndRequester
+                }
+
+                val practiceIds = activeRequests.map { it.practiceId }.distinct()
+                PracticeRepository.getPracticesByIds(practiceIds) { practicesById ->
+                    if (_binding == null) return@getPracticesByIds
+                    val futureRequests = activeRequests.filter { req ->
+                        val practice = practicesById[req.practiceId] ?: return@filter false
+                        practiceStartMillis(practice) > now
+                    }
+                    showChildLeaveDialog(groupId, childUid, futureRequests, deleteEntireCarpool)
+                }
             }
         }
     }
@@ -244,7 +315,8 @@ class DashboardHomeFragment : Fragment() {
     private fun showChildLeaveDialog(
         groupId: String,
         childUid: String,
-        futureRequests: List<DriveRequest>
+        futureRequests: List<DriveRequest>,
+        deleteEntireCarpool: Boolean
     ) {
         val msg = if (futureRequests.isEmpty()) {
             getString(R.string.leave_carpool_child_no_future_rides)
@@ -255,7 +327,7 @@ class DashboardHomeFragment : Fragment() {
             .setTitle(getString(R.string.leave_carpool_warning_title))
             .setMessage(msg)
             .setPositiveButton(getString(R.string.leave_carpool)) { _, _ ->
-                applyChildLeave(groupId, childUid, futureRequests)
+                applyChildLeave(groupId, childUid, futureRequests, deleteEntireCarpool)
             }
             .setNegativeButton(android.R.string.cancel) { _, _ ->
                 if (_binding != null) binding.dashboardHomeBtnLeaveCarpool.isEnabled = true
@@ -266,15 +338,19 @@ class DashboardHomeFragment : Fragment() {
     private fun applyChildLeave(
         groupId: String,
         childUid: String,
-        futureRequests: List<DriveRequest>
+        futureRequests: List<DriveRequest>,
+        deleteEntireCarpool: Boolean
     ) {
         if (futureRequests.isEmpty()) {
-            GroupRepository.leaveGroup(groupId, childUid) { ok, err ->
-                if (_binding == null) return@leaveGroup
+            completeChildLeaveGroup(groupId, childUid, deleteEntireCarpool) childLeave@{ ok, err ->
+                if (_binding == null) return@childLeave
                 binding.dashboardHomeBtnLeaveCarpool.isEnabled = true
                 if (!ok) {
                     Snackbar.make(binding.root, err ?: getString(R.string.leave_carpool_cancel_error), Snackbar.LENGTH_LONG).show()
-                    return@leaveGroup
+                    return@childLeave
+                }
+                if (deleteEntireCarpool) {
+                    Snackbar.make(binding.root, R.string.leave_carpool_dissolved_success, Snackbar.LENGTH_LONG).show()
                 }
                 navigateAfterLeave()
             }
@@ -298,11 +374,14 @@ class DashboardHomeFragment : Fragment() {
                         Snackbar.make(binding.root, getString(R.string.leave_carpool_cancel_error), Snackbar.LENGTH_LONG).show()
                         return@declineDriveRequest
                     }
-                    GroupRepository.leaveGroup(groupId, childUid) { okLeave, errLeave ->
-                        if (_binding == null) return@leaveGroup
+                    completeChildLeaveGroup(groupId, childUid, deleteEntireCarpool) childLeave@{ okLeave, errLeave ->
+                        if (_binding == null) return@childLeave
                         if (!okLeave) {
                             Snackbar.make(binding.root, errLeave ?: getString(R.string.leave_carpool_cancel_error), Snackbar.LENGTH_LONG).show()
-                            return@leaveGroup
+                            return@childLeave
+                        }
+                        if (deleteEntireCarpool) {
+                            Snackbar.make(binding.root, R.string.leave_carpool_dissolved_success, Snackbar.LENGTH_LONG).show()
                         }
                         navigateAfterLeave()
                     }
@@ -333,7 +412,8 @@ class DashboardHomeFragment : Fragment() {
     private fun showLeaveDialog(
         groupId: String,
         parentUid: String,
-        futureApprovedRequests: List<DriveRequest>
+        futureApprovedRequests: List<DriveRequest>,
+        deleteEntireCarpool: Boolean
     ) {
         val msg = if (futureApprovedRequests.isEmpty()) {
             getString(R.string.leave_carpool_no_future_drives)
@@ -344,7 +424,7 @@ class DashboardHomeFragment : Fragment() {
             .setTitle(getString(R.string.leave_carpool_warning_title))
             .setMessage(msg)
             .setPositiveButton(getString(R.string.leave_carpool)) { _, _ ->
-                applyParentLeave(groupId, parentUid, futureApprovedRequests)
+                applyParentLeave(groupId, parentUid, futureApprovedRequests, deleteEntireCarpool)
             }
             .setNegativeButton(android.R.string.cancel) { _, _ ->
                 if (_binding != null) {
@@ -354,18 +434,48 @@ class DashboardHomeFragment : Fragment() {
             .show()
     }
 
+    private fun completeChildLeaveGroup(
+        groupId: String,
+        uid: String,
+        deleteEntireCarpool: Boolean,
+        onDone: (Boolean, String?) -> Unit
+    ) {
+        if (deleteEntireCarpool) {
+            GroupRepository.deleteCarpoolAndRelatedData(groupId, uid, onDone)
+        } else {
+            GroupRepository.leaveGroup(groupId, uid, onDone)
+        }
+    }
+
+    private fun completeParentLeaveGroup(
+        groupId: String,
+        parentUid: String,
+        deleteEntireCarpool: Boolean,
+        onDone: (Boolean, String?) -> Unit
+    ) {
+        if (deleteEntireCarpool) {
+            GroupRepository.deleteCarpoolAndRelatedData(groupId, parentUid, onDone)
+        } else {
+            GroupRepository.leaveGroup(groupId, parentUid, onDone)
+        }
+    }
+
     private fun applyParentLeave(
         groupId: String,
         parentUid: String,
-        futureApprovedRequests: List<DriveRequest>
+        futureApprovedRequests: List<DriveRequest>,
+        deleteEntireCarpool: Boolean
     ) {
         if (futureApprovedRequests.isEmpty()) {
-            GroupRepository.leaveGroup(groupId, parentUid) { ok, err ->
-                if (_binding == null) return@leaveGroup
+            completeParentLeaveGroup(groupId, parentUid, deleteEntireCarpool) leaveDone@{ ok, err ->
+                if (_binding == null) return@leaveDone
                 binding.dashboardHomeBtnLeaveCarpool.isEnabled = true
                 if (!ok) {
                     Snackbar.make(binding.root, err ?: getString(R.string.leave_carpool_cancel_error), Snackbar.LENGTH_LONG).show()
-                    return@leaveGroup
+                    return@leaveDone
+                }
+                if (deleteEntireCarpool) {
+                    Snackbar.make(binding.root, R.string.leave_carpool_dissolved_success, Snackbar.LENGTH_LONG).show()
                 }
                 navigateAfterLeave()
             }
@@ -398,11 +508,14 @@ class DashboardHomeFragment : Fragment() {
                         Snackbar.make(binding.root, getString(R.string.leave_carpool_cancel_error), Snackbar.LENGTH_LONG).show()
                         return@declineDriveRequest
                     }
-                    GroupRepository.leaveGroup(groupId, parentUid) { okLeave, errLeave ->
-                        if (_binding == null) return@leaveGroup
+                    completeParentLeaveGroup(groupId, parentUid, deleteEntireCarpool) leaveDone@{ okLeave, errLeave ->
+                        if (_binding == null) return@leaveDone
                         if (!okLeave) {
                             Snackbar.make(binding.root, errLeave ?: getString(R.string.leave_carpool_cancel_error), Snackbar.LENGTH_LONG).show()
-                            return@leaveGroup
+                            return@leaveDone
+                        }
+                        if (deleteEntireCarpool) {
+                            Snackbar.make(binding.root, R.string.leave_carpool_dissolved_success, Snackbar.LENGTH_LONG).show()
                         }
                         navigateAfterLeave()
                     }

@@ -116,7 +116,8 @@ class FirestoreManager private constructor(context: Context) {
             "inviteCode" to group.inviteCode,
             "memberIds" to group.memberIds,
             "createdBy" to group.createdBy,
-            "blockedUids" to (group.blockedUids.ifEmpty { emptyList() })
+            "blockedUids" to (group.blockedUids.ifEmpty { emptyList() }),
+            "inactive" to group.inactive
         )
         db.collection(Constants.Firestore.COLLECTION_GROUPS)
             .document(group.id)
@@ -225,6 +226,92 @@ class FirestoreManager private constructor(context: Context) {
             .addOnFailureListener { e -> callback(false, e.message ?: "Failed to leave group") }
     }
 
+    /**
+     * Deletes all documents in [collection] with `groupId` == [groupId], in batches of 500.
+     */
+    private fun deleteDocumentsWhereGroupId(
+        collection: String,
+        groupId: String,
+        onDone: (Boolean, String?) -> Unit
+    ) {
+        db.collection(collection)
+            .whereEqualTo("groupId", groupId)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val docs = snapshot.documents
+                if (docs.isEmpty()) {
+                    onDone(true, null)
+                    return@addOnSuccessListener
+                }
+                deleteDocumentsInChunks(docs, onDone)
+            }
+            .addOnFailureListener { e -> onDone(false, e.message ?: "Query failed") }
+    }
+
+    private fun deleteDocumentsInChunks(
+        docs: List<com.google.firebase.firestore.DocumentSnapshot>,
+        onDone: (Boolean, String?) -> Unit
+    ) {
+        val chunks = docs.chunked(500)
+        var index = 0
+        fun commitNext() {
+            if (index >= chunks.size) {
+                onDone(true, null)
+                return
+            }
+            val batch = db.batch()
+            chunks[index].forEach { batch.delete(it.reference) }
+            batch.commit()
+                .addOnSuccessListener {
+                    index++
+                    commitNext()
+                }
+                .addOnFailureListener { e -> onDone(false, e.message ?: "Batch delete failed") }
+        }
+        commitNext()
+    }
+
+    /**
+     * Last member left: delete join_requests, practices, drive_requests, link_codes for this group, then delete the group document.
+     */
+    fun deleteCarpoolAndRelatedData(groupId: String, callback: (Boolean, String?) -> Unit) {
+        if (groupId.isBlank()) {
+            callback(false, "Invalid group")
+            return
+        }
+        deleteDocumentsWhereGroupId(Constants.Firestore.COLLECTION_JOIN_REQUESTS, groupId) step1@{ ok1, e1 ->
+            if (!ok1) {
+                callback(false, e1)
+                return@step1
+            }
+            deleteDocumentsWhereGroupId(Constants.Firestore.COLLECTION_PRACTICES, groupId) step2@{ ok2, e2 ->
+                if (!ok2) {
+                    callback(false, e2)
+                    return@step2
+                }
+                deleteDocumentsWhereGroupId(Constants.Firestore.COLLECTION_DRIVE_REQUESTS, groupId) step3@{ ok3, e3 ->
+                    if (!ok3) {
+                        callback(false, e3)
+                        return@step3
+                    }
+                    deleteDocumentsWhereGroupId(Constants.Firestore.COLLECTION_LINK_CODES, groupId) step4@{ ok4, e4 ->
+                        if (!ok4) {
+                            callback(false, e4)
+                            return@step4
+                        }
+                        db.collection(Constants.Firestore.COLLECTION_GROUPS)
+                            .document(groupId)
+                            .delete()
+                            .addOnSuccessListener { callback(true, null) }
+                            .addOnFailureListener { e ->
+                                callback(false, e.message ?: "Failed to delete group")
+                            }
+                    }
+                }
+            }
+        }
+    }
+
     /** Updates the group invite code (PARENT-only use). */
     fun updateGroupInviteCode(groupId: String, newInviteCode: String, callback: (Boolean, String?) -> Unit) {
         if (groupId.isBlank() || newInviteCode.isBlank()) {
@@ -245,7 +332,8 @@ class FirestoreManager private constructor(context: Context) {
         val memberIds = (doc.get("memberIds") as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
         val createdBy = doc.getString("createdBy") ?: return null
         val blockedUids = (doc.get("blockedUids") as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
-        return Group(id, name, inviteCode, memberIds, createdBy, blockedUids)
+        val inactive = doc.getBoolean("inactive") ?: false
+        return Group(id, name, inviteCode, memberIds, createdBy, blockedUids, inactive)
     }
 
     /** Creates a PENDING join request; does not add the user to the group. */

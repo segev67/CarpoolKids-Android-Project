@@ -6,5 +6,7 @@ data class Group(
     val inviteCode: String,
     val memberIds: List<String>,
     val createdBy: String,
-    val blockedUids: List<String> = emptyList()
+    val blockedUids: List<String> = emptyList(),
+    /** Set when the last parent leaves with no children; group cannot accept new joins. */
+    val inactive: Boolean = false
 )

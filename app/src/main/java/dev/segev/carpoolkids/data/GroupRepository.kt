@@ -17,6 +17,18 @@ object GroupRepository {
         FirestoreManager.getInstance().removeMemberFromGroup(groupId, uid, callback)
     }
 
+    /**
+     * Last member left: delete the group document and all app data scoped to this group
+     * (join_requests, practices, drive_requests, link_codes).
+     */
+    fun deleteCarpoolAndRelatedData(groupId: String, uid: String, callback: (Boolean, String?) -> Unit) {
+        if (uid.isBlank()) {
+            callback(false, "Invalid user")
+            return
+        }
+        FirestoreManager.getInstance().deleteCarpoolAndRelatedData(groupId, callback)
+    }
+
     fun getGroupById(groupId: String, callback: (Group?, String?) -> Unit) {
         FirestoreManager.getInstance().getGroupById(groupId, callback)
     }
@@ -53,6 +65,10 @@ object GroupRepository {
         FirestoreManager.getInstance().getGroupByInviteCode(inviteCode) { group, error ->
             if (group == null) {
                 callback(null, error)
+                return@getGroupByInviteCode
+            }
+            if (group.inactive) {
+                callback(null, "This carpool is no longer active.")
                 return@getGroupByInviteCode
             }
             if (uid in group.memberIds) {

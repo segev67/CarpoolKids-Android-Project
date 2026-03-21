@@ -30,7 +30,12 @@ object TrainingRepositoryImpl : TrainingRepository {
                 callback(null, null)
                 return@getPracticesForWeek
             }
-            val practice = practices.minByOrNull { it.startTime } ?: practices.first()
+            val active = practices.filter { !it.canceled }
+            if (active.isEmpty()) {
+                callback(null, null)
+                return@getPracticesForWeek
+            }
+            val practice = active.minByOrNull { it.startTime } ?: active.first()
             GroupRepository.getGroupById(teamId) { group, _ ->
                 val teamName = group?.name?.takeIf { it.isNotBlank() } ?: ""
                 val driverUids = listOfNotNull(

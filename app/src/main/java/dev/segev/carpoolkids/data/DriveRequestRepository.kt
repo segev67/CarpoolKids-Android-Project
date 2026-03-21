@@ -37,6 +37,10 @@ object DriveRequestRepository {
                 callback(false, "Practice not found")
                 return@getPracticeById
             }
+            if (practice.canceled) {
+                callback(false, "Practice was canceled")
+                return@getPracticeById
+            }
             val slotTaken = when (direction) {
                 DriveRequest.DIRECTION_TO -> !practice.driverToUid.isNullOrBlank()
                 DriveRequest.DIRECTION_FROM -> !practice.driverFromUid.isNullOrBlank()

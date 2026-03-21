@@ -2,6 +2,7 @@ package dev.segev.carpoolkids.utilities
 
 import android.content.Context
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -696,6 +697,90 @@ class FirestoreManager private constructor(context: Context) {
             }
     }
 
+    /**
+     * Cancel practice (Phase 1): sets [Practice.canceled], clears TO/FROM drivers,
+     * and sets all PENDING/APPROVED [drive_requests] for this practice to [DriveRequest.STATUS_CANCELED].
+     * Chains batches of up to 500 writes. UI should call only for allowed roles (e.g. parent) in a later phase.
+     */
+    fun cancelPractice(
+        practiceId: String,
+        canceledByUid: String,
+        cancelReason: String? = null,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        if (practiceId.isBlank() || canceledByUid.isBlank()) {
+            callback(false, "Invalid practice or user")
+            return
+        }
+        val practiceRef = db.collection(Constants.Firestore.COLLECTION_PRACTICES).document(practiceId)
+        practiceRef.get()
+            .addOnSuccessListener { doc ->
+                if (doc == null || !doc.exists()) {
+                    callback(false, "Practice not found")
+                    return@addOnSuccessListener
+                }
+                val practice = documentToPractice(doc) ?: run {
+                    callback(false, "Invalid practice data")
+                    return@addOnSuccessListener
+                }
+                if (practice.canceled) {
+                    callback(false, "Practice already canceled")
+                    return@addOnSuccessListener
+                }
+                db.collection(Constants.Firestore.COLLECTION_DRIVE_REQUESTS)
+                    .whereEqualTo("practiceId", practiceId)
+                    .get()
+                    .addOnSuccessListener { snap ->
+                        val toClose = snap.documents.filter { d ->
+                            val s = d.getString("status") ?: ""
+                            s == DriveRequest.STATUS_PENDING || s == DriveRequest.STATUS_APPROVED
+                        }
+                        val practiceUpdates = hashMapOf<String, Any>(
+                            "canceled" to true,
+                            "canceledAt" to FieldValue.serverTimestamp(),
+                            "canceledByUid" to canceledByUid,
+                            "driverToUid" to "",
+                            "driverFromUid" to ""
+                        )
+                        cancelReason?.trim()?.takeIf { it.isNotEmpty() }?.let {
+                            practiceUpdates["cancelReason"] = it
+                        }
+                        val ops = mutableListOf<Pair<DocumentReference, Map<String, Any>>>()
+                        ops.add(practiceRef to practiceUpdates)
+                        toClose.forEach { q ->
+                            ops.add(q.reference to mapOf("status" to DriveRequest.STATUS_CANCELED))
+                        }
+                        var index = 0
+                        fun commitNext() {
+                            if (index >= ops.size) {
+                                callback(true, null)
+                                return
+                            }
+                            val batch = db.batch()
+                            var count = 0
+                            while (index < ops.size && count < 500) {
+                                val (ref, updates) = ops[index]
+                                batch.update(ref, updates)
+                                index++
+                                count++
+                            }
+                            batch.commit()
+                                .addOnSuccessListener { commitNext() }
+                                .addOnFailureListener { e ->
+                                    callback(false, e.message ?: "Failed to cancel practice")
+                                }
+                        }
+                        commitNext()
+                    }
+                    .addOnFailureListener { e ->
+                        callback(false, e.message ?: "Failed to load drive requests")
+                    }
+            }
+            .addOnFailureListener { e ->
+                callback(false, e.message ?: "Failed to load practice")
+            }
+    }
+
     private fun documentToPractice(doc: com.google.firebase.firestore.DocumentSnapshot): Practice? {
         val id = doc.getString("id") ?: doc.id
         val groupId = doc.getString("groupId") ?: return null
@@ -784,6 +869,9 @@ class FirestoreManager private constructor(context: Context) {
         db.runTransaction { transaction: Transaction ->
             val practiceSnap = transaction.get(practiceRef)
             val requestSnap = transaction.get(requestRef)
+            if (practiceSnap.getBoolean("canceled") == true) {
+                throw RuntimeException("Practice was canceled")
+            }
             val reqStatus = requestSnap.getString("status") ?: ""
             val driverTo = practiceSnap.getString("driverToUid")?.takeIf { it.isNotEmpty() }
             val driverFrom = practiceSnap.getString("driverFromUid")?.takeIf { it.isNotEmpty() }
@@ -808,7 +896,7 @@ class FirestoreManager private constructor(context: Context) {
             .addOnSuccessListener { callback(true, null) }
             .addOnFailureListener { e ->
                 val msg = e.message ?: "Failed to accept"
-                callback(false, if (msg.contains("Slot already taken") || msg.contains("no longer pending")) msg else msg)
+                callback(false, msg)
             }
     }
 

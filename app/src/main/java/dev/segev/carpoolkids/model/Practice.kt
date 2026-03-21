@@ -15,5 +15,10 @@ data class Practice(
     val driverToUid: String? = null,
     val driverFromUid: String? = null,
     val createdBy: String? = null,
-    val createdAt: Long? = null
+    val createdAt: Long? = null,
+    /** When true, practice is off; TO/FROM drivers cleared; drive requests closed (see cancel practice). */
+    val canceled: Boolean = false,
+    val canceledAt: Long? = null,
+    val canceledByUid: String? = null,
+    val cancelReason: String? = null
 )

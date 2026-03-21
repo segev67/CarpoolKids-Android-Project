@@ -94,4 +94,17 @@ object PracticeRepository {
             callback
         )
     }
+
+    /**
+     * Phase 1 — Cancel practice: updates Firestore practice + all active drive requests for that practice.
+     * Call from UI only for allowed users (e.g. parent) in a later phase.
+     */
+    fun cancelPractice(
+        practiceId: String,
+        canceledByUid: String,
+        cancelReason: String? = null,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        FirestoreManager.getInstance().cancelPractice(practiceId, canceledByUid, cancelReason, callback)
+    }
 }

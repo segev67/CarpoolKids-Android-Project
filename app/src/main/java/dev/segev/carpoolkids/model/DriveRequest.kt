@@ -15,7 +15,7 @@ data class DriveRequest(
     val requesterUid: String,
     val status: String,
     val acceptedByUid: String? = null,
-    /** Set when a parent declines; used for "Declined by [name]" in the tab. */
+    /** Set when a parent declines; used for "Declined by name" in the tab. */
     val declinedByUid: String? = null,
     val createdAt: Long? = null
 ) {
@@ -25,5 +25,7 @@ data class DriveRequest(
         const val STATUS_PENDING = "PENDING"
         const val STATUS_APPROVED = "APPROVED"
         const val STATUS_DECLINED = "DECLINED"
+        /** Practice was canceled; slot no longer valid. */
+        const val STATUS_CANCELED = "CANCELED"
     }
 }

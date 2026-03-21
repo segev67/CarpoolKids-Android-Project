@@ -9,6 +9,22 @@
       ]
     },
     {
+      "collectionGroup": "practices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "groupId", "order": "ASCENDING" },
+        { "fieldPath": "driverToUid", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "practices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "groupId", "order": "ASCENDING" },
+        { "fieldPath": "driverFromUid", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "drive_requests",
       "queryScope": "COLLECTION",
       "fields": [

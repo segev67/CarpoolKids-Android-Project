@@ -235,7 +235,7 @@ class DashboardHomeFragment : Fragment() {
             .show()
     }
 
-    /** After eligibility passes: load future approved drives, then show confirm dialog. */
+    /** After eligibility passes: load future approved drives + practices where parent is driver, then confirm. */
     private fun loadParentFutureDrivesAndShowLeaveDialog(
         groupId: String,
         parentUid: String,
@@ -249,20 +249,84 @@ class DashboardHomeFragment : Fragment() {
                 Snackbar.make(binding.root, err, Snackbar.LENGTH_LONG).show()
                 return@getAcceptedDriveRequestsForGroup
             }
-            if (requests.isEmpty()) {
-                showLeaveDialog(groupId, parentUid, emptyList(), deleteEntireCarpool)
-                return@getAcceptedDriveRequestsForGroup
-            }
-            val practiceIds = requests.map { it.practiceId }.distinct()
-            PracticeRepository.getPracticesByIds(practiceIds) { practicesById ->
-                if (_binding == null) return@getPracticesByIds
-                val futureRequests = requests.filter { req ->
-                    if (req.status != DriveRequest.STATUS_APPROVED) return@filter false
-                    val practice = practicesById[req.practiceId] ?: return@filter false
-                    practiceStartMillis(practice) > now
+            PracticeRepository.getPracticesWhereUserIsDriver(groupId, parentUid) { driverPractices, err2 ->
+                if (_binding == null) return@getPracticesWhereUserIsDriver
+                if (err2 != null) {
+                    binding.dashboardHomeBtnLeaveCarpool.isEnabled = true
+                    Snackbar.make(binding.root, err2, Snackbar.LENGTH_LONG).show()
+                    return@getPracticesWhereUserIsDriver
                 }
-                showLeaveDialog(groupId, parentUid, futureRequests, deleteEntireCarpool)
+                val practiceIds =
+                    (requests.map { it.practiceId } + driverPractices.map { it.id }).distinct()
+                if (practiceIds.isEmpty()) {
+                    showLeaveDialog(
+                        groupId,
+                        parentUid,
+                        emptyList(),
+                        emptyMap(),
+                        upcomingDriveCount = 0,
+                        deleteEntireCarpool
+                    )
+                    return@getPracticesWhereUserIsDriver
+                }
+                PracticeRepository.getPracticesByIds(practiceIds) { practicesById ->
+                    if (_binding == null) return@getPracticesByIds
+                    val futureRequests = requests.filter { req ->
+                        if (req.status != DriveRequest.STATUS_APPROVED) return@filter false
+                        val practice = practicesById[req.practiceId] ?: return@filter false
+                        practiceStartMillis(practice) > now
+                    }
+                    val futureDriverPractices =
+                        driverPractices.filter { p -> practiceStartMillis(p) > now }
+                    val clearMap =
+                        mergeParentPracticeClears(futureRequests, futureDriverPractices, parentUid)
+                    val upcomingCount = computeParentUpcomingDriveCount(futureRequests, clearMap)
+                    showLeaveDialog(
+                        groupId,
+                        parentUid,
+                        futureRequests,
+                        clearMap,
+                        upcomingCount,
+                        deleteEntireCarpool
+                    )
+                }
             }
+        }
+    }
+
+    /** Which TO/FROM slots to clear per practice (from approved requests + schedule rows). */
+    private data class PracticeDriverClear(val clearTo: Boolean, val clearFrom: Boolean)
+
+    private fun mergeParentPracticeClears(
+        futureRequests: List<DriveRequest>,
+        futureDriverPractices: List<Practice>,
+        parentUid: String
+    ): Map<String, PracticeDriverClear> {
+        val map = mutableMapOf<String, PracticeDriverClear>()
+        for (r in futureRequests) {
+            val cur = map[r.practiceId] ?: PracticeDriverClear(clearTo = false, clearFrom = false)
+            map[r.practiceId] = PracticeDriverClear(
+                clearTo = cur.clearTo || r.direction == DriveRequest.DIRECTION_TO,
+                clearFrom = cur.clearFrom || r.direction == DriveRequest.DIRECTION_FROM
+            )
+        }
+        for (p in futureDriverPractices) {
+            val cur = map[p.id] ?: PracticeDriverClear(clearTo = false, clearFrom = false)
+            map[p.id] = PracticeDriverClear(
+                clearTo = cur.clearTo || p.driverToUid == parentUid,
+                clearFrom = cur.clearFrom || p.driverFromUid == parentUid
+            )
+        }
+        return map.filterValues { it.clearTo || it.clearFrom }
+    }
+
+    private fun computeParentUpcomingDriveCount(
+        futureRequests: List<DriveRequest>,
+        clearMap: Map<String, PracticeDriverClear>
+    ): Int {
+        if (futureRequests.isNotEmpty()) return futureRequests.size
+        return clearMap.values.sumOf { c ->
+            (if (c.clearTo) 1 else 0) + (if (c.clearFrom) 1 else 0)
         }
     }
 
@@ -357,12 +421,13 @@ class DashboardHomeFragment : Fragment() {
             return
         }
 
-        val done = AtomicInteger(0)
-        val allOk = AtomicBoolean(true)
-        val total = futureRequests.size
+        val approved = futureRequests.filter { it.status == DriveRequest.STATUS_APPROVED }
 
-        futureRequests.forEach { request ->
-            val decline = {
+        fun declineAllChildDriveRequests() {
+            val done = AtomicInteger(0)
+            val allOk = AtomicBoolean(true)
+            val total = futureRequests.size
+            futureRequests.forEach { request ->
                 DriveRequestRepository.declineDriveRequest(request, childUid) { okDecline, _ ->
                     if (_binding == null) return@declineDriveRequest
                     if (!okDecline) allOk.set(false)
@@ -387,44 +452,67 @@ class DashboardHomeFragment : Fragment() {
                     }
                 }
             }
+        }
 
-            if (request.status == DriveRequest.STATUS_APPROVED) {
-                val driverToUid = if (request.direction == DriveRequest.DIRECTION_TO) "" else null
-                val driverFromUid = if (request.direction == DriveRequest.DIRECTION_FROM) "" else null
-                PracticeRepository.updatePractice(
-                    request.practiceId,
-                    startTime = null,
-                    endTime = null,
-                    location = null,
-                    driverToUid = driverToUid,
-                    driverFromUid = driverFromUid
-                ) { okPractice, _ ->
-                    if (_binding == null) return@updatePractice
-                    if (!okPractice) allOk.set(false)
-                    decline()
-                }
-            } else {
-                decline()
+        if (approved.isEmpty()) {
+            declineAllChildDriveRequests()
+            return
+        }
+
+        val byPractice = approved.groupBy { it.practiceId }
+        val practiceEntries = byPractice.entries.toList()
+
+        fun applyNextChildPracticeClear(index: Int) {
+            if (index >= practiceEntries.size) {
+                declineAllChildDriveRequests()
+                return
+            }
+            val (practiceId, reqs) = practiceEntries[index]
+            var clearTo = false
+            var clearFrom = false
+            for (r in reqs) {
+                if (r.direction == DriveRequest.DIRECTION_TO) clearTo = true
+                if (r.direction == DriveRequest.DIRECTION_FROM) clearFrom = true
+            }
+            PracticeRepository.updatePractice(
+                practiceId,
+                startTime = null,
+                endTime = null,
+                location = null,
+                driverToUid = if (clearTo) "" else null,
+                driverFromUid = if (clearFrom) "" else null
+            ) { _, _ ->
+                if (_binding == null) return@updatePractice
+                applyNextChildPracticeClear(index + 1)
             }
         }
+        applyNextChildPracticeClear(0)
     }
 
     private fun showLeaveDialog(
         groupId: String,
         parentUid: String,
         futureApprovedRequests: List<DriveRequest>,
+        practiceClearById: Map<String, PracticeDriverClear>,
+        upcomingDriveCount: Int,
         deleteEntireCarpool: Boolean
     ) {
-        val msg = if (futureApprovedRequests.isEmpty()) {
+        val msg = if (upcomingDriveCount == 0) {
             getString(R.string.leave_carpool_no_future_drives)
         } else {
-            getString(R.string.leave_carpool_with_future_drives, futureApprovedRequests.size)
+            getString(R.string.leave_carpool_with_future_drives, upcomingDriveCount)
         }
         AlertDialog.Builder(requireContext())
             .setTitle(getString(R.string.leave_carpool_warning_title))
             .setMessage(msg)
             .setPositiveButton(getString(R.string.leave_carpool)) { _, _ ->
-                applyParentLeave(groupId, parentUid, futureApprovedRequests, deleteEntireCarpool)
+                applyParentLeave(
+                    groupId,
+                    parentUid,
+                    futureApprovedRequests,
+                    practiceClearById,
+                    deleteEntireCarpool
+                )
             }
             .setNegativeButton(android.R.string.cancel) { _, _ ->
                 if (_binding != null) {
@@ -464,9 +552,10 @@ class DashboardHomeFragment : Fragment() {
         groupId: String,
         parentUid: String,
         futureApprovedRequests: List<DriveRequest>,
+        practiceClearById: Map<String, PracticeDriverClear>,
         deleteEntireCarpool: Boolean
     ) {
-        if (futureApprovedRequests.isEmpty()) {
+        if (practiceClearById.isEmpty()) {
             completeParentLeaveGroup(groupId, parentUid, deleteEntireCarpool) leaveDone@{ ok, err ->
                 if (_binding == null) return@leaveDone
                 binding.dashboardHomeBtnLeaveCarpool.isEnabled = true
@@ -482,46 +571,66 @@ class DashboardHomeFragment : Fragment() {
             return
         }
 
-        val done = AtomicInteger(0)
-        val allOk = AtomicBoolean(true)
-        val total = futureApprovedRequests.size
+        val practiceEntries = practiceClearById.entries.toList()
 
-        futureApprovedRequests.forEach { request ->
-            val driverToUid = if (request.direction == DriveRequest.DIRECTION_TO) "" else null
-            val driverFromUid = if (request.direction == DriveRequest.DIRECTION_FROM) "" else null
+        fun finishParentLeaveAfterDeclines() {
+            completeParentLeaveGroup(groupId, parentUid, deleteEntireCarpool) leaveDone@{ okLeave, errLeave ->
+                if (_binding == null) return@leaveDone
+                binding.dashboardHomeBtnLeaveCarpool.isEnabled = true
+                if (!okLeave) {
+                    Snackbar.make(binding.root, errLeave ?: getString(R.string.leave_carpool_cancel_error), Snackbar.LENGTH_LONG).show()
+                    return@leaveDone
+                }
+                if (deleteEntireCarpool) {
+                    Snackbar.make(binding.root, R.string.leave_carpool_dissolved_success, Snackbar.LENGTH_LONG).show()
+                }
+                navigateAfterLeave()
+            }
+        }
 
-            PracticeRepository.updatePractice(
-                request.practiceId,
-                startTime = null,
-                endTime = null,
-                location = null,
-                driverToUid = driverToUid,
-                driverFromUid = driverFromUid
-            ) { okPractice, _ ->
-                if (_binding == null) return@updatePractice
+        fun declineAllParentDriveRequests() {
+            val total = futureApprovedRequests.size
+            if (total == 0) {
+                finishParentLeaveAfterDeclines()
+                return
+            }
+            val done = AtomicInteger(0)
+            val allOk = AtomicBoolean(true)
+            futureApprovedRequests.forEach { request ->
                 DriveRequestRepository.declineDriveRequest(request, parentUid) { okDecline, _ ->
-                    if (!okPractice || !okDecline) allOk.set(false)
+                    if (_binding == null) return@declineDriveRequest
+                    if (!okDecline) allOk.set(false)
                     val finished = done.incrementAndGet() >= total
                     if (!finished) return@declineDriveRequest
-                    binding.dashboardHomeBtnLeaveCarpool.isEnabled = true
                     if (!allOk.get()) {
+                        binding.dashboardHomeBtnLeaveCarpool.isEnabled = true
                         Snackbar.make(binding.root, getString(R.string.leave_carpool_cancel_error), Snackbar.LENGTH_LONG).show()
                         return@declineDriveRequest
                     }
-                    completeParentLeaveGroup(groupId, parentUid, deleteEntireCarpool) leaveDone@{ okLeave, errLeave ->
-                        if (_binding == null) return@leaveDone
-                        if (!okLeave) {
-                            Snackbar.make(binding.root, errLeave ?: getString(R.string.leave_carpool_cancel_error), Snackbar.LENGTH_LONG).show()
-                            return@leaveDone
-                        }
-                        if (deleteEntireCarpool) {
-                            Snackbar.make(binding.root, R.string.leave_carpool_dissolved_success, Snackbar.LENGTH_LONG).show()
-                        }
-                        navigateAfterLeave()
-                    }
+                    finishParentLeaveAfterDeclines()
                 }
             }
         }
+
+        fun applyNextPracticeClear(index: Int) {
+            if (index >= practiceEntries.size) {
+                declineAllParentDriveRequests()
+                return
+            }
+            val (practiceId, flags) = practiceEntries[index]
+            PracticeRepository.updatePractice(
+                practiceId,
+                startTime = null,
+                endTime = null,
+                location = null,
+                driverToUid = if (flags.clearTo) "" else null,
+                driverFromUid = if (flags.clearFrom) "" else null
+            ) { _, _ ->
+                if (_binding == null) return@updatePractice
+                applyNextPracticeClear(index + 1)
+            }
+        }
+        applyNextPracticeClear(0)
     }
 
     private fun navigateAfterLeave() {

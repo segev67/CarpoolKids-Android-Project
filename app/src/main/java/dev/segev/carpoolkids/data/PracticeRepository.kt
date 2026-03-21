@@ -40,6 +40,15 @@ object PracticeRepository {
         FirestoreManager.getInstance().getPracticesByIds(ids, callback)
     }
 
+    /** Practices where this user is set as TO or FROM driver on the schedule (may have no drive_request). */
+    fun getPracticesWhereUserIsDriver(
+        groupId: String,
+        uid: String,
+        callback: (List<Practice>, String?) -> Unit
+    ) {
+        FirestoreManager.getInstance().getPracticesWhereUserIsDriver(groupId, uid, callback)
+    }
+
     fun createPractice(
         groupId: String,
         dateMillis: Long,

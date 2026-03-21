@@ -14,6 +14,8 @@ import dev.segev.carpoolkids.model.Practice
 import dev.segev.carpoolkids.model.UserProfile
 import java.lang.ref.WeakReference
 import java.util.Date
+import java.util.LinkedHashMap
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 class FirestoreManager private constructor(context: Context) {
@@ -535,6 +537,45 @@ class FirestoreManager private constructor(context: Context) {
     }
 
     /**
+     * Practices in [groupId] where [uid] is assigned as TO or FROM driver (schedule document).
+     * Used when leaving carpool: driver may exist without a matching drive_requests.acceptedByUid row.
+     */
+    fun getPracticesWhereUserIsDriver(
+        groupId: String,
+        uid: String,
+        callback: (List<Practice>, String?) -> Unit
+    ) {
+        if (groupId.isBlank() || uid.isBlank()) {
+            callback(emptyList(), "Invalid group or user")
+            return
+        }
+        val col = db.collection(Constants.Firestore.COLLECTION_PRACTICES)
+        col.whereEqualTo("groupId", groupId)
+            .whereEqualTo("driverToUid", uid)
+            .get()
+            .addOnSuccessListener { snap1 ->
+                val list1 = snap1.documents.mapNotNull { documentToPractice(it) }
+                col.whereEqualTo("groupId", groupId)
+                    .whereEqualTo("driverFromUid", uid)
+                    .get()
+                    .addOnSuccessListener { snap2 ->
+                        val list2 = snap2.documents.mapNotNull { documentToPractice(it) }
+                        val byId = LinkedHashMap<String, Practice>()
+                        for (p in list1 + list2) {
+                            byId[p.id] = p
+                        }
+                        callback(byId.values.toList(), null)
+                    }
+                    .addOnFailureListener { e ->
+                        callback(list1, e.message ?: "Failed to load practices (from driver)")
+                    }
+            }
+            .addOnFailureListener { e ->
+                callback(emptyList(), e.message ?: "Failed to load practices (to driver)")
+            }
+    }
+
+    /**
      * Fetches multiple practices by ID. Returns a map practiceId -> Practice for found documents.
      */
     fun getPracticesByIds(ids: List<String>, callback: (Map<String, Practice>) -> Unit) {
@@ -543,7 +584,7 @@ class FirestoreManager private constructor(context: Context) {
             callback(emptyMap())
             return
         }
-        val result = mutableMapOf<String, Practice>()
+        val result = ConcurrentHashMap<String, Practice>()
         val pending = AtomicInteger(distinct.size)
         for (id in distinct) {
             db.collection(Constants.Firestore.COLLECTION_PRACTICES)
@@ -551,10 +592,10 @@ class FirestoreManager private constructor(context: Context) {
                 .get()
                 .addOnSuccessListener { doc ->
                     documentToPractice(doc)?.let { result[it.id] = it }
-                    if (pending.decrementAndGet() == 0) callback(result)
+                    if (pending.decrementAndGet() == 0) callback(HashMap(result))
                 }
                 .addOnFailureListener {
-                    if (pending.decrementAndGet() == 0) callback(result)
+                    if (pending.decrementAndGet() == 0) callback(HashMap(result))
                 }
         }
     }

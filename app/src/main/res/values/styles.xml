@@ -38,6 +38,15 @@
         <item name="android:minHeight">@dimen/button_min_height</item>
     </style>
 
+    <!-- Join requests card: three equal-width actions; same text size + fixed height (no per-button autosize). -->
+    <style name="Widget.CarpoolKids.Button.JoinRequestAction" parent="Widget.CarpoolKids.Button">
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minHeight">@dimen/button_min_height</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textSize">@dimen/join_request_action_text_size</item>
+    </style>
+
     <!-- Home: section title (e.g. My Teams, Today's Training) -->
     <style name="TextAppearance.Home.SectionTitle" parent="TextAppearance.MaterialComponents.Headline6">
         <item name="android:textSize">@dimen/text_title_size</item>

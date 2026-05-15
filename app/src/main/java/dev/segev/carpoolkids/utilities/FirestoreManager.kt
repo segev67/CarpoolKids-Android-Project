@@ -804,12 +804,15 @@ class FirestoreManager private constructor(context: Context) {
 
     /**
      * Phase 2 — Set or update a practice's geographic coordinates.
+     * When [addressLabel] is non-blank, it's also written into the practice's `location` text
+     * field in the same atomic update (used by the map picker reverse-geocode path).
      * Rules: any group member may update; UI is gated to parents.
      */
     fun updateLocationCoords(
         practiceId: String,
         lat: Double,
         lng: Double,
+        addressLabel: String? = null,
         callback: (Boolean, String?) -> Unit
     ) {
         if (practiceId.isBlank()) {
@@ -820,6 +823,7 @@ class FirestoreManager private constructor(context: Context) {
             "locationLat" to lat,
             "locationLng" to lng
         )
+        addressLabel?.takeIf { it.isNotBlank() }?.let { updates["location"] = it }
         db.collection(Constants.Firestore.COLLECTION_PRACTICES)
             .document(practiceId)
             .update(updates)

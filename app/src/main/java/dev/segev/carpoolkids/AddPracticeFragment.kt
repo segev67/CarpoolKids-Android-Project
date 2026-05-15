@@ -59,6 +59,11 @@ class AddPracticeFragment : Fragment() {
             pickedLat = coords.first
             pickedLng = coords.second
             binding.addPracticePickOnMap.text = getString(R.string.add_practice_pick_on_map_set)
+            // Auto-populate the location text field with the reverse-geocoded address (if available).
+            // User can edit afterwards if they prefer a friendlier name like "Main Gym".
+            MapPickerActivity.extractAddress(result.data)?.let { addr ->
+                binding.addPracticeLocation.setText(addr)
+            }
         }
 
         binding.addPracticeDate.setOnClickListener { showDatePicker() }

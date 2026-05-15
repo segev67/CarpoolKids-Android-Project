@@ -79,14 +79,18 @@ object PracticeRepository {
         }
     }
 
-    /** Phase 2 — set or update the practice's lat/lng (set via the map picker). */
+    /**
+     * Phase 2 — set or update the practice's lat/lng (set via the map picker).
+     * When [addressLabel] is non-blank, the practice's `location` text field is also updated atomically.
+     */
     fun updateLocationCoords(
         practiceId: String,
         lat: Double,
         lng: Double,
+        addressLabel: String? = null,
         callback: (Boolean, String?) -> Unit
     ) {
-        FirestoreManager.getInstance().updateLocationCoords(practiceId, lat, lng, callback)
+        FirestoreManager.getInstance().updateLocationCoords(practiceId, lat, lng, addressLabel, callback)
     }
 
     fun updatePractice(

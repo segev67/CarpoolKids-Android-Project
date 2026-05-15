@@ -68,7 +68,8 @@ class PracticeDetailFragment : Fragment() {
             if (_binding == null) return@registerForActivityResult
             if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
             val coords = MapPickerActivity.extractResult(result.data) ?: return@registerForActivityResult
-            savePracticeCoords(coords.first, coords.second)
+            val address = MapPickerActivity.extractAddress(result.data)
+            savePracticeCoords(coords.first, coords.second, address)
         }
 
         // Phase 3 — "Set" action on the post-join Snackbar launches the home picker here, NOT the
@@ -79,8 +80,9 @@ class PracticeDetailFragment : Fragment() {
             if (_binding == null) return@registerForActivityResult
             if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
             val coords = MapPickerActivity.extractResult(result.data) ?: return@registerForActivityResult
+            val address = MapPickerActivity.extractAddress(result.data)
             val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@registerForActivityResult
-            UserRepository.updateHomeAddress(uid, coords.first, coords.second) { ok, err ->
+            UserRepository.updateHomeAddress(uid, coords.first, coords.second, address) { ok, err ->
                 if (_binding == null) return@updateHomeAddress
                 if (ok) {
                     Snackbar.make(binding.root, R.string.profile_home_saved, Snackbar.LENGTH_SHORT).show()
@@ -323,14 +325,21 @@ class PracticeDetailFragment : Fragment() {
         )
     }
 
-    private fun savePracticeCoords(lat: Double, lng: Double) {
+    private fun savePracticeCoords(lat: Double, lng: Double, addressLabel: String? = null) {
         val p = practice ?: return
         binding.practiceDetailSetLocationOnMap.isEnabled = false
-        PracticeRepository.updateLocationCoords(p.id, lat, lng) { ok, err ->
+        PracticeRepository.updateLocationCoords(p.id, lat, lng, addressLabel) { ok, err ->
             if (_binding == null) return@updateLocationCoords
             binding.practiceDetailSetLocationOnMap.isEnabled = true
             if (ok) {
-                practice = p.copy(locationLat = lat, locationLng = lng)
+                // Reflect the new coords + (if provided) reverse-geocoded location in local state.
+                // bindPractice writes p.location into the EditText, so the field updates automatically.
+                val resolvedLocation = addressLabel?.takeIf { it.isNotBlank() } ?: p.location
+                practice = p.copy(
+                    locationLat = lat,
+                    locationLng = lng,
+                    location = resolvedLocation
+                )
                 practice?.let { bindPractice(it) }
                 Snackbar.make(
                     binding.root,

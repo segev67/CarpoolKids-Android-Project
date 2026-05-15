@@ -30,7 +30,8 @@ class SetHomeAddressActivity : AppCompatActivity() {
             return@registerForActivityResult
         }
         val coords = MapPickerActivity.extractResult(result.data) ?: return@registerForActivityResult
-        saveHomeAddress(coords.first, coords.second)
+        val address = MapPickerActivity.extractAddress(result.data)
+        saveHomeAddress(coords.first, coords.second, address)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,7 +50,7 @@ class SetHomeAddressActivity : AppCompatActivity() {
         }
     }
 
-    private fun saveHomeAddress(lat: Double, lng: Double) {
+    private fun saveHomeAddress(lat: Double, lng: Double, label: String? = null) {
         val uid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
         if (uid.isBlank()) {
             // Auth gone — bail to caller, who will redirect to Login.
@@ -59,7 +60,7 @@ class SetHomeAddressActivity : AppCompatActivity() {
         }
         showProgress(true)
         setButtonsEnabled(false)
-        UserRepository.updateHomeAddress(uid, lat, lng) { ok, err ->
+        UserRepository.updateHomeAddress(uid, lat, lng, label) { ok, err ->
             showProgress(false)
             if (ok) {
                 setResult(Activity.RESULT_OK)

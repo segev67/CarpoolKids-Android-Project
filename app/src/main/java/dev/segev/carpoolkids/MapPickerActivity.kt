@@ -174,12 +174,79 @@ class MapPickerActivity : AppCompatActivity(), OnMapReadyCallback {
             Snackbar.make(binding.root, R.string.map_picker_select_first, Snackbar.LENGTH_SHORT).show()
             return
         }
+        val lat = m.position.latitude
+        val lng = m.position.longitude
+        // Disable confirm while reverse-geocoding to prevent double-tap; the call itself is async.
+        binding.mapPickerConfirm.isEnabled = false
+
+        // Safety net: if reverse-geocoding doesn't respond within 3s, return coords-only so the
+        // user is never stuck waiting on a flaky geocoder.
+        var resolved = false
+        val handler = android.os.Handler(android.os.Looper.getMainLooper())
+        val timeout = Runnable {
+            if (resolved) return@Runnable
+            resolved = true
+            sendResult(lat, lng, null)
+        }
+        handler.postDelayed(timeout, 3_000L)
+
+        reverseGeocode(lat, lng) { addressLabel ->
+            if (resolved) return@reverseGeocode
+            resolved = true
+            handler.removeCallbacks(timeout)
+            sendResult(lat, lng, addressLabel)
+        }
+    }
+
+    private fun sendResult(lat: Double, lng: Double, addressLabel: String?) {
         val data = Intent().apply {
-            putExtra(EXTRA_RESULT_LAT, m.position.latitude)
-            putExtra(EXTRA_RESULT_LNG, m.position.longitude)
+            putExtra(EXTRA_RESULT_LAT, lat)
+            putExtra(EXTRA_RESULT_LNG, lng)
+            addressLabel?.takeIf { it.isNotBlank() }?.let { putExtra(EXTRA_RESULT_ADDRESS, it) }
         }
         setResult(Activity.RESULT_OK, data)
         finish()
+    }
+
+    /**
+     * Reverse-geocode (lat,lng) → human-readable address line. Uses the same Geocoder as forward
+     * search. Returns null if geocoder is unavailable, the call fails, or no result.
+     */
+    private fun reverseGeocode(lat: Double, lng: Double, callback: (String?) -> Unit) {
+        if (!Geocoder.isPresent()) {
+            callback(null)
+            return
+        }
+        val geocoder = Geocoder(this, Locale.getDefault())
+        if (Build.VERSION.SDK_INT >= 33) {
+            geocoder.getFromLocation(lat, lng, 1, object : Geocoder.GeocodeListener {
+                override fun onGeocode(addresses: MutableList<Address>) {
+                    runOnUiThread { callback(formatAddress(addresses.firstOrNull())) }
+                }
+                override fun onError(errorMessage: String?) {
+                    runOnUiThread { callback(null) }
+                }
+            })
+        } else {
+            Thread {
+                val result: Address? = try {
+                    @Suppress("DEPRECATION")
+                    geocoder.getFromLocation(lat, lng, 1)?.firstOrNull()
+                } catch (_: Exception) {
+                    null
+                }
+                runOnUiThread { callback(formatAddress(result)) }
+            }.start()
+        }
+    }
+
+    /** Prefer the full first address line; fall back to "thoroughfare, locality, country" pieces. */
+    private fun formatAddress(addr: Address?): String? {
+        if (addr == null) return null
+        val line = addr.getAddressLine(0)
+        if (!line.isNullOrBlank()) return line
+        val parts = listOfNotNull(addr.thoroughfare, addr.locality, addr.countryName)
+        return parts.joinToString(", ").takeIf { it.isNotBlank() }
     }
 
     companion object {
@@ -188,6 +255,7 @@ class MapPickerActivity : AppCompatActivity(), OnMapReadyCallback {
         const val EXTRA_TITLE = "title"
         const val EXTRA_RESULT_LAT = "result_lat"
         const val EXTRA_RESULT_LNG = "result_lng"
+        const val EXTRA_RESULT_ADDRESS = "result_address"
 
         // Tel Aviv default — only shown when no initial pin and the user hasn't zoomed yet.
         private const val DEFAULT_LAT = 32.0853
@@ -225,6 +293,15 @@ class MapPickerActivity : AppCompatActivity(), OnMapReadyCallback {
             val lat = data.getDoubleExtra(EXTRA_RESULT_LAT, Double.NaN)
             val lng = data.getDoubleExtra(EXTRA_RESULT_LNG, Double.NaN)
             return if (lat.isNaN() || lng.isNaN()) null else lat to lng
+        }
+
+        /**
+         * Extract the human-readable address line that the picker reverse-geocoded on confirm.
+         * May be null when the geocoder is unavailable, times out, or returns no result.
+         * Callers can use it to pre-fill a text field (e.g. practice location, home address label).
+         */
+        fun extractAddress(data: Intent?): String? {
+            return data?.getStringExtra(EXTRA_RESULT_ADDRESS)?.takeIf { it.isNotBlank() }
         }
     }
 }

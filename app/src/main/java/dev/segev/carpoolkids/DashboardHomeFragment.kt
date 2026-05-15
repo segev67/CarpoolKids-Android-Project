@@ -75,7 +75,8 @@ class DashboardHomeFragment : Fragment() {
             if (_binding == null) return@registerForActivityResult
             if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
             val coords = MapPickerActivity.extractResult(result.data) ?: return@registerForActivityResult
-            saveHomeAddress(coords.first, coords.second)
+            val address = MapPickerActivity.extractAddress(result.data)
+            saveHomeAddress(coords.first, coords.second, address)
         }
         binding.dashboardHomeHomeAddressAction.setOnClickListener {
             homeAddressPickerLauncher.launch(
@@ -244,11 +245,11 @@ class DashboardHomeFragment : Fragment() {
             if (!hasHomeAddress) View.VISIBLE else View.GONE
     }
 
-    private fun saveHomeAddress(lat: Double, lng: Double) {
+    private fun saveHomeAddress(lat: Double, lng: Double, label: String? = null) {
         val uid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
         if (uid.isBlank()) return
         binding.dashboardHomeHomeAddressAction.isEnabled = false
-        UserRepository.updateHomeAddress(uid, lat, lng) { ok, err ->
+        UserRepository.updateHomeAddress(uid, lat, lng, label) { ok, err ->
             if (_binding == null) return@updateHomeAddress
             binding.dashboardHomeHomeAddressAction.isEnabled = true
             if (ok) {

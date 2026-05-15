@@ -149,6 +149,17 @@
                 android:visibility="gone"
                 tools:text="⚠ Some riders have no address: Daniel, Maya"
                 tools:visibility="visible" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/route_summary_generated_ago"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_xs"
+                android:textColor="@color/dashboard_text_secondary"
+                android:textSize="12sp"
+                android:visibility="gone"
+                tools:text="Generated 2 minutes ago"
+                tools:visibility="visible" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 

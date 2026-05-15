@@ -1,11 +1,14 @@
 package dev.segev.carpoolkids
 
+import android.animation.ValueAnimator
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
 import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -18,6 +21,7 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.MapStyleOptions
+import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
@@ -75,6 +79,10 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
 
     private lateinit var adapter: RouteStopsAdapter
     private val drawnPolylines = mutableListOf<Polyline>()
+    /** Phase 8 — keyed by passengerUid so a stop-row tap can focus its marker on the map. */
+    private val stopMarkers = mutableMapOf<String, Marker>()
+    /** Phase 8 — running marker fade-in animators; cancelled in clearMap / onDestroyView. */
+    private val markerAnimators = mutableListOf<ValueAnimator>()
 
     private val practiceId: String get() = arguments?.getString(ARG_PRACTICE_ID).orEmpty()
     private val direction: String get() = arguments?.getString(ARG_DIRECTION).orEmpty()
@@ -106,7 +114,8 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
 
         adapter = RouteStopsAdapter(
             direction = direction,
-            currentUserUid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+            currentUserUid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty(),
+            onStopClick = { stop -> focusStopOnMap(stop) }
         )
         binding.routeStopsList.layoutManager = LinearLayoutManager(requireContext())
         binding.routeStopsList.adapter = adapter
@@ -129,6 +138,9 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
         routeListener = null
         practiceListener?.remove()
         practiceListener = null
+        markerAnimators.forEach { it.cancel() }
+        markerAnimators.clear()
+        stopMarkers.clear()
         drawnPolylines.forEach { it.remove() }
         drawnPolylines.clear()
         googleMap?.clear()
@@ -310,6 +322,26 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
             binding.routeSummaryMissing.visibility = View.GONE
         }
 
+        // Phase 8 — "Generated 2 minutes ago" line. Uses DateUtils so we get locale-aware copy
+        // for free; sub-minute differences round to "just now" because the relative formatter
+        // can't go below MINUTE_IN_MILLIS.
+        val generatedAt = route.generatedAt
+        if (generatedAt != null) {
+            val now = System.currentTimeMillis()
+            val ago = if (now - generatedAt < DateUtils.MINUTE_IN_MILLIS) {
+                getString(R.string.route_generated_just_now)
+            } else {
+                val rel = DateUtils.getRelativeTimeSpanString(
+                    generatedAt, now, DateUtils.MINUTE_IN_MILLIS
+                ).toString()
+                getString(R.string.route_generated_ago, rel)
+            }
+            binding.routeSummaryGeneratedAgo.text = ago
+            binding.routeSummaryGeneratedAgo.visibility = View.VISIBLE
+        } else {
+            binding.routeSummaryGeneratedAgo.visibility = View.GONE
+        }
+
         // Action row
         binding.routeActionsRow.visibility = View.VISIBLE
         binding.routeRegenerate.visibility = if (isAssignedDriver) View.VISIBLE else View.GONE
@@ -413,28 +445,71 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
         )
 
         // Numbered stop markers — sequence is 0-based in the model but 1-based on the pin.
-        for (stop in route.stops) {
-            map.addMarker(
+        // Phase 8: start invisible and fade in with a per-marker stagger for the "drop in" feel.
+        route.stops.forEachIndexed { idx, stop ->
+            val marker = map.addMarker(
                 MarkerOptions()
                     .position(LatLng(stop.lat, stop.lng))
                     .icon(NumberedMarkerFactory.create(ctx, stop.sequence + 1))
                     .anchor(0.5f, 0.5f)
+                    .alpha(0f)
                     .title(stop.passengerName.ifBlank { stop.passengerUid })
-            )
+            ) ?: return@forEachIndexed
+            stopMarkers[stop.passengerUid] = marker
+            animateMarkerIn(marker, delayMs = idx * MARKER_STAGGER_MS)
         }
 
         // Camera: fit all included points. Use a bounds builder so single-stop routes still frame.
+        // Phase 8: animateCamera with a duration so the framing feels intentional rather than abrupt.
         val boundsBuilder = LatLngBounds.builder()
             .include(origin)
             .include(destination)
         route.stops.forEach { boundsBuilder.include(LatLng(it.lat, it.lng)) }
         polyPoints.forEach { boundsBuilder.include(it) }
         runCatching {
-            map.moveCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), CAMERA_PADDING_PX))
+            map.animateCamera(
+                CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), CAMERA_PADDING_PX),
+                CAMERA_ANIMATION_MS,
+                null
+            )
         }
     }
 
+    /** Fade a single marker from invisible to fully visible after [delayMs]. Tracked for teardown. */
+    private fun animateMarkerIn(marker: Marker, delayMs: Long) {
+        val animator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = MARKER_FADE_DURATION_MS
+            startDelay = delayMs
+            interpolator = DecelerateInterpolator()
+            addUpdateListener { va ->
+                // The marker may have been removed if the route was regenerated mid-animation;
+                // guard with a try/catch on the SDK's IllegalArgumentException.
+                runCatching { marker.alpha = va.animatedValue as Float }
+            }
+        }
+        markerAnimators += animator
+        animator.start()
+    }
+
+    /**
+     * Phase 8 — stop row tap: zoom in on that stop and pop its info window. Cheap "look here"
+     * affordance that doesn't require a custom bounce animation.
+     */
+    private fun focusStopOnMap(stop: dev.segev.carpoolkids.model.RouteStop) {
+        val map = googleMap ?: return
+        val target = LatLng(stop.lat, stop.lng)
+        map.animateCamera(
+            CameraUpdateFactory.newLatLngZoom(target, STOP_FOCUS_ZOOM),
+            CAMERA_FOCUS_MS,
+            null
+        )
+        stopMarkers[stop.passengerUid]?.showInfoWindow()
+    }
+
     private fun clearMap() {
+        markerAnimators.forEach { it.cancel() }
+        markerAnimators.clear()
+        stopMarkers.clear()
         drawnPolylines.forEach { it.remove() }
         drawnPolylines.clear()
         googleMap?.clear()
@@ -490,6 +565,13 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
 
         private const val POLYLINE_WIDTH_PX = 14f
         private const val CAMERA_PADDING_PX = 160
+
+        // Phase 8 — animation timings.
+        private const val CAMERA_ANIMATION_MS = 600
+        private const val CAMERA_FOCUS_MS = 400
+        private const val STOP_FOCUS_ZOOM = 15f
+        private const val MARKER_FADE_DURATION_MS = 280L
+        private const val MARKER_STAGGER_MS = 90L
 
         private val TIME_FMT = SimpleDateFormat("HH:mm", Locale.US)
 

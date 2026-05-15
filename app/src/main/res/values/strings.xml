@@ -300,4 +300,8 @@
     <string name="route_state_stale_driver">Riders changed since this route was generated — tap Regenerate to refresh.</string>
     <string name="route_state_stale_member">Riders changed since this route was generated — ask the driver to regenerate.</string>
     <string name="route_retry">Retry</string>
+
+    <!-- Phase 8 — polish -->
+    <string name="route_generated_ago">Generated %1$s</string>
+    <string name="route_generated_just_now">Generated just now</string>
 </resources>

@@ -21,7 +21,8 @@ import java.util.Locale
  */
 class RouteStopsAdapter(
     private val direction: String,
-    private var currentUserUid: String = ""
+    private var currentUserUid: String = "",
+    private val onStopClick: (RouteStop) -> Unit = {}
 ) : RecyclerView.Adapter<RouteStopsAdapter.ViewHolder>() {
 
     private val items = mutableListOf<RouteStop>()
@@ -46,7 +47,9 @@ class RouteStopsAdapter(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(items[position], direction, currentUserUid)
+        val stop = items[position]
+        holder.bind(stop, direction, currentUserUid)
+        holder.itemView.setOnClickListener { onStopClick(stop) }
     }
 
     override fun getItemCount(): Int = items.size

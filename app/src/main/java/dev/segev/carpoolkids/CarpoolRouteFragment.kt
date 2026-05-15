@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -25,6 +26,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ListenerRegistration
 import dev.segev.carpoolkids.data.CarpoolRouteRepository
 import dev.segev.carpoolkids.data.PracticeRepository
+import dev.segev.carpoolkids.data.UserRepository
 import dev.segev.carpoolkids.databinding.FragmentCarpoolRouteBinding
 import dev.segev.carpoolkids.model.CarpoolRoute
 import dev.segev.carpoolkids.model.Practice
@@ -39,17 +41,20 @@ import java.util.Locale
 /**
  * Read-only route screen for a single (practice, direction) pair.
  *
- * Lifecycle:
- *  - `_binding`     → cleared in onDestroyView.
- *  - `routeListener` → removed in onDestroyView (single Firestore snapshot listener per screen).
- *  - `googleMap`    → only touched after onMapReady, and only when _binding is still alive.
+ * Lifecycle (Phase 6 discipline; Phase 7 added the practice listener):
+ *  - `_binding`        → cleared in onDestroyView.
+ *  - `routeListener`    → removed in onDestroyView.
+ *  - `practiceListener` → removed in onDestroyView.
+ *  - `googleMap`        → only touched after onMapReady and while _binding is alive.
  *
- * State machine driven by the doc presence + `route.status`:
- *  - doc null    → driver sees "Generate route" CTA, others see "Driver hasn't generated it yet".
- *  - READY       → full UI (map + summary + stops + Regenerate / Open in Maps actions).
- *  - EMPTY_ROSTER → "No riders signed up yet."
- *  - FAILED       → failure copy + Retry (drivers only).
- *  - GENERATING / STALE → fall through to READY rendering; Phase 7 adds the stale banner.
+ * State precedence (top wins):
+ *  1. Practice canceled        → orange banner; map cleared; no actions.
+ *  2. No driver for direction   → "No driver claimed this yet" / "Driver canceled their slot".
+ *  3. No route doc              → driver gets a Generate CTA; everyone else sees "Not generated yet".
+ *  4. Route doc EMPTY_ROSTER    → "No riders signed up" + driver Regenerate CTA.
+ *  5. Route doc FAILED          → failure copy + driver Retry CTA.
+ *  6. Route doc READY (default) → map + summary + stops + actions, with a stale banner if
+ *                                 `participantUids` no longer matches `stops ∪ missingAddressUids`.
  */
 class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
 
@@ -58,10 +63,15 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
 
     private var googleMap: GoogleMap? = null
     private var routeListener: ListenerRegistration? = null
+    private var practiceListener: ListenerRegistration? = null
 
     private var practice: Practice? = null
     private var route: CarpoolRoute? = null
     private var isGenerating = false
+
+    /** Cached display names for [CarpoolRoute.missingAddressUids]; refreshed when the set changes. */
+    private var missingNamesByUid: Map<String, String> = emptyMap()
+    private var missingNamesFetchKey: Set<String> = emptySet()
 
     private lateinit var adapter: RouteStopsAdapter
     private val drawnPolylines = mutableListOf<Polyline>()
@@ -103,18 +113,22 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
 
         binding.routeRegenerate.setOnClickListener { generateRoute() }
         binding.routeStateAction.setOnClickListener { generateRoute() }
+        binding.routeStateBannerAction.setOnClickListener { generateRoute() }
         binding.routeOpenInMaps.setOnClickListener { openInGoogleMaps() }
 
         val mapFragment = childFragmentManager.findFragmentById(R.id.route_map) as? SupportMapFragment
         mapFragment?.getMapAsync(this)
 
-        loadPracticeThenListen()
+        attachPracticeListener()
+        attachRouteListener()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         routeListener?.remove()
         routeListener = null
+        practiceListener?.remove()
+        practiceListener = null
         drawnPolylines.forEach { it.remove() }
         drawnPolylines.clear()
         googleMap?.clear()
@@ -135,13 +149,12 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
         route?.let { drawRouteOnMap(it) }
     }
 
-    private fun loadPracticeThenListen() {
-        PracticeRepository.getPracticeById(practiceId) { loaded, _ ->
-            if (_binding == null) return@getPracticeById
-            practice = loaded
-            // The route doc may exist independently of the practice (defensive: we still wire the listener
-            // even if practice load fails so the empty-state copy at least reflects current Firestore truth).
-            attachRouteListener()
+    private fun attachPracticeListener() {
+        if (practiceListener != null) return
+        practiceListener = PracticeRepository.listenToPractice(practiceId) { incoming ->
+            if (_binding == null) return@listenToPractice
+            practice = incoming
+            render()
         }
     }
 
@@ -151,6 +164,28 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
         routeListener = CarpoolRouteRepository.listenToRoute(routeId) { incoming ->
             if (_binding == null) return@listenToRoute
             route = incoming
+            // Refresh missing-name cache only when the uid set actually changes — avoids hammering
+            // Firestore each time the listener fires for an unrelated field change.
+            val newKey = incoming?.missingAddressUids?.toSet().orEmpty()
+            if (newKey != missingNamesFetchKey) {
+                missingNamesFetchKey = newKey
+                if (newKey.isEmpty()) {
+                    missingNamesByUid = emptyMap()
+                } else {
+                    UserRepository.getUsersByIds(newKey.toList()) { profileMap ->
+                        if (_binding == null) return@getUsersByIds
+                        // Late update: only apply if the same set is still the one we wanted.
+                        if (missingNamesFetchKey == newKey) {
+                            missingNamesByUid = profileMap.mapValues { (_, profile) ->
+                                profile.displayName?.takeIf { it.isNotBlank() }
+                                    ?: profile.email?.takeIf { it.isNotBlank() }
+                                    ?: profile.uid
+                            }
+                            render()
+                        }
+                    }
+                }
+            }
             render()
         }
     }
@@ -161,26 +196,59 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
         val route = this.route
 
         val currentUid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
-        val isAssignedDriver = practice != null && when (direction) {
-            Constants.RouteDirection.PICKUP -> practice.driverToUid == currentUid
-            Constants.RouteDirection.DROPOFF -> practice.driverFromUid == currentUid
-            else -> false
+        val expectedDriverUid = when (direction) {
+            Constants.RouteDirection.PICKUP -> practice?.driverToUid
+            Constants.RouteDirection.DROPOFF -> practice?.driverFromUid
+            else -> null
         }
+        val isAssignedDriver =
+            expectedDriverUid != null && expectedDriverUid.isNotBlank() && expectedDriverUid == currentUid
 
         // Default everything to hidden; each branch turns the pieces it needs back on.
         binding.routeSummaryCard.visibility = View.GONE
         binding.routeActionsRow.visibility = View.GONE
         binding.routeStateOverlay.visibility = View.GONE
         binding.routeStateAction.visibility = View.GONE
+        binding.routeStateBanner.visibility = View.GONE
+        binding.routeStateBannerAction.visibility = View.GONE
         binding.routeProgress.visibility = if (isGenerating) View.VISIBLE else View.GONE
 
+        // 1. Practice canceled — overrides everything. Banner stays up; the rest of the screen is
+        //    cleared so the driver doesn't accidentally act on a stale plan.
+        if (practice?.canceled == true) {
+            showBanner(getString(R.string.route_state_practice_canceled), actionVisible = false)
+            showEmptyState(
+                message = getString(R.string.route_state_practice_canceled),
+                actionVisible = false
+            )
+            adapter.submitList(emptyList())
+            clearMap()
+            return
+        }
+
+        // 2. No assigned driver for this direction. A pre-existing route doc means the driver
+        //    cancelled their slot — call that out specifically; otherwise it's just unassigned.
+        if (expectedDriverUid.isNullOrBlank()) {
+            val message = if (route != null) {
+                getString(R.string.route_state_driver_canceled)
+            } else {
+                getString(R.string.route_state_no_driver)
+            }
+            showEmptyState(message = message, actionVisible = false)
+            adapter.submitList(emptyList())
+            clearMap()
+            return
+        }
+
+        // 3. No route doc yet.
         if (route == null) {
             showEmptyState(
                 message = getString(
                     if (isAssignedDriver) R.string.route_not_generated_driver
                     else R.string.route_not_generated_member
                 ),
-                actionVisible = isAssignedDriver && !isGenerating
+                actionVisible = isAssignedDriver && !isGenerating,
+                actionLabel = R.string.route_generate_now
             )
             adapter.submitList(emptyList())
             clearMap()
@@ -190,8 +258,9 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
         when (route.status) {
             Constants.RouteStatus.EMPTY_ROSTER -> {
                 showEmptyState(
-                    message = getString(R.string.route_empty_roster),
-                    actionVisible = isAssignedDriver && !isGenerating
+                    message = getString(R.string.route_state_no_riders),
+                    actionVisible = isAssignedDriver && !isGenerating,
+                    actionLabel = R.string.route_generate_now
                 )
                 adapter.submitList(emptyList())
                 clearMap()
@@ -199,19 +268,20 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
             Constants.RouteStatus.FAILED -> {
                 showEmptyState(
                     message = getString(
-                        R.string.route_failed_state,
+                        R.string.route_state_failed_with_retry,
                         route.failureReason ?: "unknown error"
                     ),
-                    actionVisible = isAssignedDriver && !isGenerating
+                    actionVisible = isAssignedDriver && !isGenerating,
+                    actionLabel = R.string.route_retry
                 )
                 adapter.submitList(emptyList())
                 clearMap()
             }
-            else -> renderReadyRoute(route, isAssignedDriver)
+            else -> renderReadyRoute(route, practice, isAssignedDriver)
         }
     }
 
-    private fun renderReadyRoute(route: CarpoolRoute, isAssignedDriver: Boolean) {
+    private fun renderReadyRoute(route: CarpoolRoute, practice: Practice?, isAssignedDriver: Boolean) {
         val binding = _binding ?: return
         adapter.setCurrentUserUid(FirebaseAuth.getInstance().currentUser?.uid.orEmpty())
         adapter.submitList(route.stops)
@@ -231,8 +301,10 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
         )
 
         if (route.missingAddressUids.isNotEmpty()) {
-            val joined = missingDisplayNames(route)
-            binding.routeSummaryMissing.text = getString(R.string.route_missing_addresses, joined)
+            binding.routeSummaryMissing.text = getString(
+                R.string.route_missing_addresses,
+                missingDisplayNames(route)
+            )
             binding.routeSummaryMissing.visibility = View.VISIBLE
         } else {
             binding.routeSummaryMissing.visibility = View.GONE
@@ -245,22 +317,55 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
         binding.routeOpenInMaps.visibility =
             if (route.stops.isNotEmpty()) View.VISIBLE else View.GONE
 
-        // Map
+        // Stale banner — only meaningful when we actually have a practice snapshot to compare to,
+        // and only when we're not already regenerating (avoids the noisy mid-flight banner flicker).
+        if (practice != null && !isGenerating && isRouteStale(route, practice)) {
+            showBanner(
+                text = getString(
+                    if (isAssignedDriver) R.string.route_state_stale_driver
+                    else R.string.route_state_stale_member
+                ),
+                actionVisible = isAssignedDriver
+            )
+        }
+
         drawRouteOnMap(route)
     }
 
-    private fun missingDisplayNames(route: CarpoolRoute): String {
-        // Phase 6 stays on the doc only — name lookups live on the route screen for the routed
-        // stops already, but for missing riders we just show their uids (Phase 7 swaps in display
-        // names via UserRepository.getUsersByIds without forcing a fetch here).
-        return route.missingAddressUids.joinToString(", ")
+    /**
+     * Stale iff the riders covered by the route (routed stops + skipped missing-address uids) no
+     * longer match `practice.participantUids` exactly. Set comparison catches joins, leaves, and
+     * the swap case where one rider replaces another between regenerations.
+     */
+    private fun isRouteStale(route: CarpoolRoute, practice: Practice): Boolean {
+        val routeCoverage =
+            (route.stops.map { it.passengerUid } + route.missingAddressUids).toSet()
+        val participants = practice.participantUids.toSet()
+        return routeCoverage != participants
     }
 
-    private fun showEmptyState(message: String, actionVisible: Boolean) {
+    private fun missingDisplayNames(route: CarpoolRoute): String =
+        route.missingAddressUids.joinToString(", ") { uid ->
+            missingNamesByUid[uid] ?: uid
+        }
+
+    private fun showBanner(text: String, actionVisible: Boolean) {
+        val binding = _binding ?: return
+        binding.routeStateBanner.visibility = View.VISIBLE
+        binding.routeStateBannerText.text = text
+        binding.routeStateBannerAction.visibility = if (actionVisible) View.VISIBLE else View.GONE
+    }
+
+    private fun showEmptyState(
+        message: String,
+        actionVisible: Boolean,
+        @StringRes actionLabel: Int = R.string.route_generate_now
+    ) {
         val binding = _binding ?: return
         binding.routeStateOverlay.visibility = View.VISIBLE
         binding.routeStateMessage.text = message
         binding.routeStateAction.visibility = if (actionVisible) View.VISIBLE else View.GONE
+        binding.routeStateAction.setText(actionLabel)
     }
 
     private fun drawRouteOnMap(route: CarpoolRoute) {

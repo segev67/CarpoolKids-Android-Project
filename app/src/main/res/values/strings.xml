@@ -290,4 +290,14 @@
     <string name="route_failed_state">Route generation failed: %1$s</string>
     <string name="route_missing_addresses">⚠ Some riders have no address: %1$s</string>
     <string name="route_no_practice">Could not load practice details.</string>
+
+    <!-- Phase 7 — edge states + stale detection -->
+    <string name="route_state_practice_canceled">Practice canceled. The carpool route is no longer needed.</string>
+    <string name="route_state_no_driver">No driver has claimed this direction yet.</string>
+    <string name="route_state_driver_canceled">The driver canceled their slot. Another driver needs to claim it before a route can be generated.</string>
+    <string name="route_state_no_riders">No riders are signed up for this practice yet.</string>
+    <string name="route_state_failed_with_retry">Route generation failed: %1$s</string>
+    <string name="route_state_stale_driver">Riders changed since this route was generated — tap Regenerate to refresh.</string>
+    <string name="route_state_stale_member">Riders changed since this route was generated — ask the driver to regenerate.</string>
+    <string name="route_retry">Retry</string>
 </resources>

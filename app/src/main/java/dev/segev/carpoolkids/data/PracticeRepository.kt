@@ -36,6 +36,10 @@ object PracticeRepository {
         FirestoreManager.getInstance().getPracticeById(practiceId, callback)
     }
 
+    /** Phase 7 — single-practice realtime listener used by the route screen for stale detection. */
+    fun listenToPractice(practiceId: String, callback: (Practice?) -> Unit): ListenerRegistration =
+        FirestoreManager.getInstance().listenToPractice(practiceId, callback)
+
     fun getPracticesByIds(ids: List<String>, callback: (Map<String, Practice>) -> Unit) {
         FirestoreManager.getInstance().getPracticesByIds(ids, callback)
     }
@@ -138,9 +142,10 @@ object PracticeRepository {
     /** Phase 3 — child removes themselves; cancels any APPROVED drive_request atomically. */
     fun leavePractice(
         practiceId: String,
+        groupId: String,
         uid: String,
         callback: (Boolean, String?) -> Unit
     ) {
-        FirestoreManager.getInstance().leavePractice(practiceId, uid, callback)
+        FirestoreManager.getInstance().leavePractice(practiceId, groupId, uid, callback)
     }
 }

@@ -41,7 +41,45 @@
             tools:text="Pickup route" />
     </LinearLayout>
 
-    <!-- Map fills the upper half of the screen below the toolbar. -->
+    <!-- Phase 7 — state banner under the toolbar. Surfaces stale / driver-canceled / practice-canceled
+         copy live as the practice listener fires. Hidden by default; pushes the map down when visible. -->
+    <LinearLayout
+        android:id="@+id/route_state_banner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/status_pending_orange"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="@dimen/dashboard_screen_padding"
+        android:paddingVertical="@dimen/spacing_sm"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/route_toolbar"
+        tools:visibility="visible">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/route_state_banner_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/dashboard_text_primary"
+            android:textSize="@dimen/text_section_label_size"
+            tools:text="Riders changed since this route was generated — tap Regenerate to refresh." />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/route_state_banner_action"
+            style="@style/Widget.CarpoolKids.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/spacing_sm"
+            android:minWidth="0dp"
+            android:paddingHorizontal="@dimen/spacing_md"
+            android:text="@string/route_regenerate"
+            android:textSize="@dimen/text_badge_size"
+            android:visibility="gone"
+            tools:visibility="visible" />
+    </LinearLayout>
+
+    <!-- Map fills the upper half of the screen below the toolbar (or below the banner if it's showing). -->
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/route_map"
         android:name="com.google.android.gms.maps.SupportMapFragment"
@@ -50,7 +88,7 @@
         app:layout_constraintBottom_toTopOf="@id/route_panel"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/route_toolbar" />
+        app:layout_constraintTop_toBottomOf="@id/route_state_banner" />
 
     <!-- Summary card overlaid on the map's top edge. -->
     <com.google.android.material.card.MaterialCardView
@@ -66,7 +104,7 @@
         app:cardElevation="@dimen/card_elevation"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/route_toolbar"
+        app:layout_constraintTop_toTopOf="@id/route_map"
         tools:visibility="visible">
 
         <LinearLayout

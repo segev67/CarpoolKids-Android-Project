@@ -291,7 +291,7 @@ class PracticeDetailFragment : Fragment() {
         val p = practice ?: return
         isJoinInFlight = true
         binding.practiceDetailJoinButton.isEnabled = false
-        PracticeRepository.leavePractice(p.id, uid) { ok, err ->
+        PracticeRepository.leavePractice(p.id, p.groupId, uid) { ok, err ->
             if (_binding == null) return@leavePractice
             isJoinInFlight = false
             if (!ok) {

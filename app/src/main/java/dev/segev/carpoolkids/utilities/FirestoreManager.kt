@@ -555,6 +555,30 @@ class FirestoreManager private constructor(context: Context) {
     }
 
     /**
+     * Phase 7 — single-practice realtime listener. Used by the route screen so participants /
+     * driver / canceled changes from other users propagate within ~1 s. Caller must remove the
+     * returned registration in onDestroyView.
+     */
+    fun listenToPractice(
+        practiceId: String,
+        callback: (Practice?) -> Unit
+    ): ListenerRegistration {
+        return db.collection(Constants.Firestore.COLLECTION_PRACTICES)
+            .document(practiceId)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    callback(null)
+                    return@addSnapshotListener
+                }
+                if (snapshot == null || !snapshot.exists()) {
+                    callback(null)
+                    return@addSnapshotListener
+                }
+                callback(documentToPractice(snapshot))
+            }
+    }
+
+    /**
      * Practices in [groupId] where [uid] is assigned as TO or FROM driver (schedule document).
      * Used when leaving carpool: driver may exist without a matching drive_requests.acceptedByUid row.
      */
@@ -737,18 +761,24 @@ class FirestoreManager private constructor(context: Context) {
      * Phase 3 — Remove the calling user from a practice's [Practice.participantUids] and, in the same
      * batch, mark any APPROVED [drive_requests] they had for this practice as CANCELED. Atomic so the
      * UI never shows a child as still riding with an active drive request after they tap Leave.
+     *
+     * [groupId] is required by the drive_requests `read` rule — the rule references
+     * `resource.data.groupId`, so the query must include it as a filter or Firestore rejects the
+     * whole query with PERMISSION_DENIED before evaluating any individual doc.
      */
     fun leavePractice(
         practiceId: String,
+        groupId: String,
         uid: String,
         callback: (Boolean, String?) -> Unit
     ) {
-        if (practiceId.isBlank() || uid.isBlank()) {
-            callback(false, "Invalid practice or user")
+        if (practiceId.isBlank() || groupId.isBlank() || uid.isBlank()) {
+            callback(false, "Invalid practice, group or user")
             return
         }
         val practiceRef = db.collection(Constants.Firestore.COLLECTION_PRACTICES).document(practiceId)
         db.collection(Constants.Firestore.COLLECTION_DRIVE_REQUESTS)
+            .whereEqualTo("groupId", groupId)
             .whereEqualTo("practiceId", practiceId)
             .whereEqualTo("requesterUid", uid)
             .whereEqualTo("status", DriveRequest.STATUS_APPROVED)

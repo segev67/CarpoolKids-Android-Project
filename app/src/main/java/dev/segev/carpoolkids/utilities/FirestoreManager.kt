@@ -704,6 +704,105 @@ class FirestoreManager private constructor(context: Context) {
     }
 
     /**
+     * Phase 3 — Add the calling user to a practice's [Practice.participantUids].
+     * Idempotent (arrayUnion). UI hides the button when the user is already a rider.
+     */
+    fun joinPractice(
+        practiceId: String,
+        uid: String,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        if (practiceId.isBlank() || uid.isBlank()) {
+            callback(false, "Invalid practice or user")
+            return
+        }
+        db.collection(Constants.Firestore.COLLECTION_PRACTICES)
+            .document(practiceId)
+            .update("participantUids", FieldValue.arrayUnion(uid))
+            .addOnSuccessListener { callback(true, null) }
+            .addOnFailureListener { e ->
+                callback(false, e.message ?: "Failed to join practice")
+            }
+    }
+
+    /**
+     * Phase 3 — Remove the calling user from a practice's [Practice.participantUids] and, in the same
+     * batch, mark any APPROVED [drive_requests] they had for this practice as CANCELED. Atomic so the
+     * UI never shows a child as still riding with an active drive request after they tap Leave.
+     */
+    fun leavePractice(
+        practiceId: String,
+        uid: String,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        if (practiceId.isBlank() || uid.isBlank()) {
+            callback(false, "Invalid practice or user")
+            return
+        }
+        val practiceRef = db.collection(Constants.Firestore.COLLECTION_PRACTICES).document(practiceId)
+        db.collection(Constants.Firestore.COLLECTION_DRIVE_REQUESTS)
+            .whereEqualTo("practiceId", practiceId)
+            .whereEqualTo("requesterUid", uid)
+            .whereEqualTo("status", DriveRequest.STATUS_APPROVED)
+            .get()
+            .addOnSuccessListener { snap ->
+                val batch = db.batch()
+                batch.update(practiceRef, "participantUids", FieldValue.arrayRemove(uid))
+                for (doc in snap.documents) {
+                    batch.update(doc.reference, "status", DriveRequest.STATUS_CANCELED)
+                }
+                batch.commit()
+                    .addOnSuccessListener { callback(true, null) }
+                    .addOnFailureListener { e ->
+                        callback(false, e.message ?: "Failed to leave practice")
+                    }
+            }
+            .addOnFailureListener { e ->
+                callback(false, e.message ?: "Failed to query drive requests")
+            }
+    }
+
+    /**
+     * Phase 3 — leaveGroup cascade. Removes [uid] from `participantUids` on every FUTURE practice in
+     * the group (past practices keep history), then removes the uid from `memberIds`. If the cleanup
+     * query itself fails, we fall through to just removing from the group (best-effort).
+     */
+    fun leaveGroupAndCleanupParticipants(
+        groupId: String,
+        uid: String,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        if (groupId.isBlank() || uid.isBlank()) {
+            callback(false, "Invalid group or user")
+            return
+        }
+        val nowTimestamp = Timestamp(Date(System.currentTimeMillis()))
+        db.collection(Constants.Firestore.COLLECTION_PRACTICES)
+            .whereEqualTo("groupId", groupId)
+            .whereGreaterThan("date", nowTimestamp)
+            .get()
+            .addOnSuccessListener { snap ->
+                if (snap.isEmpty) {
+                    removeMemberFromGroup(groupId, uid, callback)
+                    return@addOnSuccessListener
+                }
+                val batch = db.batch()
+                for (doc in snap.documents) {
+                    batch.update(doc.reference, "participantUids", FieldValue.arrayRemove(uid))
+                }
+                batch.commit()
+                    .addOnSuccessListener { removeMemberFromGroup(groupId, uid, callback) }
+                    .addOnFailureListener {
+                        // Cleanup failed — still let the user leave the group. Orphans are tolerated.
+                        removeMemberFromGroup(groupId, uid, callback)
+                    }
+            }
+            .addOnFailureListener {
+                removeMemberFromGroup(groupId, uid, callback)
+            }
+    }
+
+    /**
      * Phase 2 — Set or update a practice's geographic coordinates.
      * Rules: any group member may update; UI is gated to parents.
      */
@@ -988,10 +1087,16 @@ class FirestoreManager private constructor(context: Context) {
             if (reqStatus != DriveRequest.STATUS_PENDING || slotTaken) {
                 throw RuntimeException("Slot already taken or request no longer pending")
             }
-            when (request.direction) {
-                DriveRequest.DIRECTION_TO -> transaction.update(practiceRef, "driverToUid", acceptedByUid)
-                DriveRequest.DIRECTION_FROM -> transaction.update(practiceRef, "driverFromUid", acceptedByUid)
-            }
+            // Phase 3: same transaction also arrayUnions the requester into participantUids so the route
+            // roster stays in sync with "this child is riding." Partial state is not acceptable.
+            val driverField = if (request.direction == DriveRequest.DIRECTION_TO) "driverToUid" else "driverFromUid"
+            transaction.update(
+                practiceRef,
+                mapOf(
+                    driverField to acceptedByUid,
+                    "participantUids" to FieldValue.arrayUnion(request.requesterUid)
+                )
+            )
             transaction.update(
                 requestRef,
                 "status", DriveRequest.STATUS_APPROVED,

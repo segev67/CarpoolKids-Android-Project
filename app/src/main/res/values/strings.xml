@@ -233,6 +233,17 @@
     <string name="set_home_address_set_button">Set on map</string>
     <string name="set_home_address_skip_button">Skip for now</string>
 
+    <!-- Join practice (Phase 3 — route feature) -->
+    <string name="practice_join_button">+ Join this practice</string>
+    <string name="practice_leave_button">✓ You\'re riding · tap to leave</string>
+    <string name="practice_riders_label">Riders (%1$d)</string>
+    <string name="practice_no_riders">No riders yet</string>
+    <string name="practice_join_already_pending">Waiting for a parent to approve your drive request</string>
+    <string name="practice_join_failed">Could not join practice. Try again.</string>
+    <string name="practice_leave_failed">Could not leave practice. Try again.</string>
+    <string name="practice_join_set_home_tip">Tip: set your home address so your driver can pick you up.</string>
+    <string name="practice_join_set_home_action">Set</string>
+
     <!-- Practice location coords (Phase 2 — route feature) -->
     <string name="add_practice_pick_on_map">Pick on map</string>
     <string name="add_practice_pick_on_map_set">Pin set ✓</string>

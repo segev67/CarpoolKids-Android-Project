@@ -34,7 +34,13 @@ class PracticeDetailFragment : Fragment() {
 
     private var practice: Practice? = null
     private var isCancelingPractice = false
+    /** True when the viewing CHILD has a PENDING drive_request for this practice — hides Join. */
+    private var hasPendingDriveRequest = false
+    /** Guard against double-tap join/leave while a request is in flight. */
+    private var isJoinInFlight = false
     private lateinit var mapPickerLauncher: ActivityResultLauncher<Intent>
+    /** Separate launcher for the post-join "set your home address" tip so its result writes to the user profile, not to the practice. */
+    private lateinit var homeMapPickerLauncher: ActivityResultLauncher<Intent>
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -65,9 +71,33 @@ class PracticeDetailFragment : Fragment() {
             savePracticeCoords(coords.first, coords.second)
         }
 
+        // Phase 3 — "Set" action on the post-join Snackbar launches the home picker here, NOT the
+        // practice-location picker above. Separate launcher avoids writing home coords into the practice.
+        homeMapPickerLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (_binding == null) return@registerForActivityResult
+            if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
+            val coords = MapPickerActivity.extractResult(result.data) ?: return@registerForActivityResult
+            val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@registerForActivityResult
+            UserRepository.updateHomeAddress(uid, coords.first, coords.second) { ok, err ->
+                if (_binding == null) return@updateHomeAddress
+                if (ok) {
+                    Snackbar.make(binding.root, R.string.profile_home_saved, Snackbar.LENGTH_SHORT).show()
+                } else {
+                    Snackbar.make(
+                        binding.root,
+                        err ?: getString(R.string.profile_home_save_error),
+                        Snackbar.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+
         binding.practiceDetailSave.setOnClickListener { save(groupId) }
         binding.practiceDetailCancelPractice.setOnClickListener { confirmCancelPractice() }
         binding.practiceDetailSetLocationOnMap.setOnClickListener { openLocationPicker() }
+        binding.practiceDetailJoinButton.setOnClickListener { toggleJoinPractice() }
         binding.practiceDetailRequestTo.setOnClickListener { requestDrive(groupId, DriveRequest.DIRECTION_TO) }
         binding.practiceDetailRequestFrom.setOnClickListener { requestDrive(groupId, DriveRequest.DIRECTION_FROM) }
         binding.practiceDetailIllTakeTo.setOnClickListener { selfDeclare(groupId, DriveRequest.DIRECTION_TO) }
@@ -85,6 +115,7 @@ class PracticeDetailFragment : Fragment() {
             practice = p
             bindPractice(p)
             loadDriverNames(p)
+            loadMyDriveRequestsIfChild(groupId, practiceId)
         }
     }
 
@@ -122,6 +153,21 @@ class PracticeDetailFragment : Fragment() {
                 R.string.practice_detail_set_location_on_map
         )
 
+        // Phase 3 — children manage their own participation in the carpool roster.
+        val isChild = role == Constants.UserRole.CHILD
+        val isParticipant = currentUid.isNotBlank() && currentUid in p.participantUids
+        val canJoinLeave = isChild && !p.canceled && !hasPendingDriveRequest
+        binding.practiceDetailJoinButton.visibility = if (canJoinLeave) View.VISIBLE else View.GONE
+        binding.practiceDetailJoinButton.isEnabled = !isJoinInFlight
+        if (canJoinLeave) {
+            binding.practiceDetailJoinButton.setText(
+                if (isParticipant) R.string.practice_leave_button else R.string.practice_join_button
+            )
+        }
+        binding.practiceDetailJoinPendingHint.visibility =
+            if (isChild && !p.canceled && hasPendingDriveRequest) View.VISIBLE else View.GONE
+        updateRidersList(p)
+
         binding.practiceDetailDay.text = formatDayOfWeek(p.dateMillis)
         binding.practiceDetailDate.text = formatDate(p.dateMillis)
         binding.practiceDetailStartTime.setText(p.startTime)
@@ -147,6 +193,122 @@ class PracticeDetailFragment : Fragment() {
         binding.practiceDetailIllTakeFrom.visibility = if (p.driverFromUid.isNullOrBlank() && isParent) View.VISIBLE else View.GONE
         binding.practiceDetailCancelTo.visibility = if (p.driverToUid == currentUid) View.VISIBLE else View.GONE
         binding.practiceDetailCancelFrom.visibility = if (p.driverFromUid == currentUid) View.VISIBLE else View.GONE
+    }
+
+    /**
+     * Load the current child's own drive_requests so the Join button can be hidden when there's an
+     * unresolved PENDING request (avoids double-bookkeeping with the existing request flow).
+     */
+    private fun loadMyDriveRequestsIfChild(groupId: String, practiceId: String) {
+        val role = arguments?.getString(ARG_ROLE).orEmpty()
+        if (role != Constants.UserRole.CHILD) return
+        if (groupId.isBlank()) return
+        val uid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+        if (uid.isBlank()) return
+        DriveRequestRepository.getDriveRequestsForGroupAndRequester(groupId, uid) { reqs, _ ->
+            if (_binding == null) return@getDriveRequestsForGroupAndRequester
+            hasPendingDriveRequest = reqs.any {
+                it.practiceId == practiceId && it.status == DriveRequest.STATUS_PENDING
+            }
+            practice?.let { bindPractice(it) }
+        }
+    }
+
+    /** Decide whether the tap should join or leave, based on current participation. */
+    private fun toggleJoinPractice() {
+        val p = practice ?: return
+        if (p.canceled || isJoinInFlight || hasPendingDriveRequest) return
+        val uid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+        if (uid.isBlank()) return
+        if (uid in p.participantUids) leavePracticeAction(uid) else joinPracticeAction(uid)
+    }
+
+    private fun joinPracticeAction(uid: String) {
+        val p = practice ?: return
+        isJoinInFlight = true
+        binding.practiceDetailJoinButton.isEnabled = false
+        PracticeRepository.joinPractice(p.id, uid) { ok, err ->
+            if (_binding == null) return@joinPractice
+            isJoinInFlight = false
+            if (!ok) {
+                binding.practiceDetailJoinButton.isEnabled = true
+                Snackbar.make(
+                    binding.root,
+                    err ?: getString(R.string.practice_join_failed),
+                    Snackbar.LENGTH_LONG
+                ).show()
+                return@joinPractice
+            }
+            practice = p.copy(participantUids = (p.participantUids + uid).distinct())
+            practice?.let { bindPractice(it) }
+            maybeShowSetHomeTip(uid)
+        }
+    }
+
+    private fun leavePracticeAction(uid: String) {
+        val p = practice ?: return
+        isJoinInFlight = true
+        binding.practiceDetailJoinButton.isEnabled = false
+        PracticeRepository.leavePractice(p.id, uid) { ok, err ->
+            if (_binding == null) return@leavePractice
+            isJoinInFlight = false
+            if (!ok) {
+                binding.practiceDetailJoinButton.isEnabled = true
+                Snackbar.make(
+                    binding.root,
+                    err ?: getString(R.string.practice_leave_failed),
+                    Snackbar.LENGTH_LONG
+                ).show()
+                return@leavePractice
+            }
+            practice = p.copy(participantUids = p.participantUids - uid)
+            practice?.let { bindPractice(it) }
+        }
+    }
+
+    /**
+     * After a successful join, nudge the child to set their home address if they haven't yet.
+     * Non-blocking; the dashboard banner remains as the long-term reminder.
+     */
+    private fun maybeShowSetHomeTip(uid: String) {
+        UserRepository.getUser(uid) { profile, _ ->
+            if (_binding == null) return@getUser
+            if (profile?.homeLat == null) {
+                Snackbar.make(
+                    binding.root,
+                    R.string.practice_join_set_home_tip,
+                    8_000
+                ).setAction(R.string.practice_join_set_home_action) {
+                    homeMapPickerLauncher.launch(
+                        MapPickerActivity.intentForHome(requireContext(), null, null)
+                    )
+                }.show()
+            }
+        }
+    }
+
+    /** Render "Riders (N): name, name, name" subtext from the practice's participantUids. */
+    private fun updateRidersList(p: Practice) {
+        if (p.participantUids.isEmpty()) {
+            binding.practiceDetailRidersLabel.visibility = View.GONE
+            binding.practiceDetailRidersValue.visibility = View.GONE
+            return
+        }
+        binding.practiceDetailRidersLabel.text =
+            getString(R.string.practice_riders_label, p.participantUids.size)
+        binding.practiceDetailRidersLabel.visibility = View.VISIBLE
+        binding.practiceDetailRidersValue.visibility = View.VISIBLE
+        binding.practiceDetailRidersValue.text = ""
+        UserRepository.getUsersByIds(p.participantUids) { profileMap ->
+            if (_binding == null) return@getUsersByIds
+            val names = p.participantUids.mapNotNull { uid ->
+                profileMap[uid]?.displayName?.takeIf { it.isNotBlank() }
+                    ?: profileMap[uid]?.email?.takeIf { it.isNotBlank() }
+            }
+            binding.practiceDetailRidersValue.text =
+                if (names.isNotEmpty()) names.joinToString(", ")
+                else getString(R.string.join_request_requester_unknown)
+        }
     }
 
     private fun openLocationPicker() {

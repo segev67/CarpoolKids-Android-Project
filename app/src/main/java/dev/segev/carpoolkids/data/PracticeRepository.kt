@@ -121,4 +121,22 @@ object PracticeRepository {
     ) {
         FirestoreManager.getInstance().cancelPractice(practiceId, canceledByUid, cancelReason, callback)
     }
+
+    /** Phase 3 — child adds themselves to the practice carpool roster (arrayUnion). */
+    fun joinPractice(
+        practiceId: String,
+        uid: String,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        FirestoreManager.getInstance().joinPractice(practiceId, uid, callback)
+    }
+
+    /** Phase 3 — child removes themselves; cancels any APPROVED drive_request atomically. */
+    fun leavePractice(
+        practiceId: String,
+        uid: String,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        FirestoreManager.getInstance().leavePractice(practiceId, uid, callback)
+    }
 }

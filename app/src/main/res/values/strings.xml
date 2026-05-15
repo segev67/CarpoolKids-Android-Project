@@ -256,4 +256,12 @@
     <string name="practice_detail_change_location_on_map">Change location on map</string>
     <string name="practice_detail_location_coords_saved">Location coordinates saved.</string>
     <string name="practice_detail_location_coords_save_error">Could not save coordinates. Try again.</string>
+
+    <!-- Generate carpool route (Phase 5 — driver only; temporary, replaced by route screen in Phase 6) -->
+    <string name="route_generate_pickup">Generate pickup route</string>
+    <string name="route_generate_dropoff">Generate dropoff route</string>
+    <string name="route_generating">Generating route…</string>
+    <string name="route_generated_toast">Route saved (%1$s).</string>
+    <string name="route_generated_empty_toast">Route saved — no riders to route yet.</string>
+    <string name="route_generation_failed">Could not generate route: %1$s</string>
 </resources>

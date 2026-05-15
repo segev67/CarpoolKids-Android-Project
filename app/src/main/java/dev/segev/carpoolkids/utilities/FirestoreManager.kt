@@ -9,10 +9,12 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Transaction
+import dev.segev.carpoolkids.model.CarpoolRoute
 import dev.segev.carpoolkids.model.DriveRequest
 import dev.segev.carpoolkids.model.Group
 import dev.segev.carpoolkids.model.JoinRequest
 import dev.segev.carpoolkids.model.Practice
+import dev.segev.carpoolkids.model.RouteStop
 import dev.segev.carpoolkids.model.UserProfile
 import java.lang.ref.WeakReference
 import java.util.Date
@@ -309,13 +311,19 @@ class FirestoreManager private constructor(context: Context) {
                             callback(false, e4)
                             return@step4
                         }
-                        db.collection(Constants.Firestore.COLLECTION_GROUPS)
-                            .document(groupId)
-                            .delete()
-                            .addOnSuccessListener { callback(true, null) }
-                            .addOnFailureListener { e ->
-                                callback(false, e.message ?: "Failed to delete group")
+                        deleteDocumentsWhereGroupId(Constants.Firestore.COLLECTION_CARPOOL_ROUTES, groupId) step5@{ ok5, e5 ->
+                            if (!ok5) {
+                                callback(false, e5)
+                                return@step5
                             }
+                            db.collection(Constants.Firestore.COLLECTION_GROUPS)
+                                .document(groupId)
+                                .delete()
+                                .addOnSuccessListener { callback(true, null) }
+                                .addOnFailureListener { e ->
+                                    callback(false, e.message ?: "Failed to delete group")
+                                }
+                        }
                     }
                 }
             }
@@ -1334,6 +1342,173 @@ class FirestoreManager private constructor(context: Context) {
                 val list = snapshot?.documents?.mapNotNull { documentToGroup(it) } ?: emptyList()
                 callback(list)
             }
+    }
+
+    // ---------- Carpool routes (Phase 5) ----------
+
+    /**
+     * Idempotent write: creates the carpool_routes doc, or overwrites it when the driver regenerates.
+     * The doc id is deterministic — `{practiceId}_{direction}` — so a regenerate replaces the prior
+     * route cleanly, which is exactly what we want.
+     */
+    fun createOrUpdateCarpoolRoute(route: CarpoolRoute, callback: (Boolean, String?) -> Unit) {
+        val data: HashMap<String, Any?> = hashMapOf(
+            "id" to route.id,
+            "groupId" to route.groupId,
+            "practiceId" to route.practiceId,
+            "direction" to route.direction,
+            "driverUid" to route.driverUid,
+            "driverHomeLat" to route.driverHomeLat,
+            "driverHomeLng" to route.driverHomeLng,
+            "trainingLat" to route.trainingLat,
+            "trainingLng" to route.trainingLng,
+            "trainingStartTime" to route.trainingStartTime,
+            "trainingEndTime" to route.trainingEndTime,
+            "practiceDateMillis" to route.practiceDateMillis,
+            "stops" to route.stops.map { stopToMap(it) },
+            "recommendedDepartureMillis" to route.recommendedDepartureMillis,
+            "totalDurationSec" to route.totalDurationSec,
+            "totalDistanceMeters" to route.totalDistanceMeters,
+            "polyline" to route.polyline,
+            "polylinePrecision" to route.polylinePrecision,
+            "status" to route.status,
+            "failureReason" to route.failureReason,
+            "generatedAt" to (route.generatedAt?.let { Timestamp(Date(it)) }
+                ?: FieldValue.serverTimestamp()),
+            "generatedByUid" to route.generatedByUid,
+            "missingAddressUids" to route.missingAddressUids,
+            "aiSummary" to route.aiSummary,
+            "aiSummaryGeneratedAt" to route.aiSummaryGeneratedAt?.let { Timestamp(Date(it)) }
+        )
+        db.collection(Constants.Firestore.COLLECTION_CARPOOL_ROUTES)
+            .document(route.id)
+            .set(data)
+            .addOnSuccessListener { callback(true, null) }
+            .addOnFailureListener { e -> callback(false, e.message ?: "Failed to save route") }
+    }
+
+    fun getCarpoolRoute(routeId: String, callback: (CarpoolRoute?, String?) -> Unit) {
+        if (routeId.isBlank()) {
+            callback(null, "Invalid route id")
+            return
+        }
+        db.collection(Constants.Firestore.COLLECTION_CARPOOL_ROUTES)
+            .document(routeId)
+            .get()
+            .addOnSuccessListener { doc ->
+                if (doc == null || !doc.exists()) {
+                    callback(null, null)
+                } else {
+                    callback(documentToCarpoolRoute(doc), null)
+                }
+            }
+            .addOnFailureListener { e -> callback(null, e.message ?: "Failed to load route") }
+    }
+
+    fun listenToCarpoolRoute(routeId: String, callback: (CarpoolRoute?) -> Unit): ListenerRegistration {
+        return db.collection(Constants.Firestore.COLLECTION_CARPOOL_ROUTES)
+            .document(routeId)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    callback(null)
+                    return@addSnapshotListener
+                }
+                if (snapshot == null || !snapshot.exists()) {
+                    callback(null)
+                    return@addSnapshotListener
+                }
+                callback(documentToCarpoolRoute(snapshot))
+            }
+    }
+
+    private fun stopToMap(stop: RouteStop): Map<String, Any?> = mapOf(
+        "sequence" to stop.sequence,
+        "passengerUid" to stop.passengerUid,
+        "passengerName" to stop.passengerName,
+        "lat" to stop.lat,
+        "lng" to stop.lng,
+        "etaMillis" to stop.etaMillis,
+        "legDurationSec" to stop.legDurationSec,
+        "legDistanceMeters" to stop.legDistanceMeters
+    )
+
+    private fun documentToCarpoolRoute(doc: com.google.firebase.firestore.DocumentSnapshot): CarpoolRoute? {
+        if (!doc.exists()) return null
+        val id = doc.getString("id") ?: doc.id
+        val groupId = doc.getString("groupId") ?: return null
+        val practiceId = doc.getString("practiceId") ?: return null
+        val direction = doc.getString("direction") ?: return null
+        val driverUid = doc.getString("driverUid") ?: return null
+        val driverHomeLat = doc.getDouble("driverHomeLat") ?: return null
+        val driverHomeLng = doc.getDouble("driverHomeLng") ?: return null
+        val trainingLat = doc.getDouble("trainingLat") ?: return null
+        val trainingLng = doc.getDouble("trainingLng") ?: return null
+        val trainingStartTime = doc.getString("trainingStartTime") ?: ""
+        val trainingEndTime = doc.getString("trainingEndTime") ?: ""
+        val practiceDateMillis = doc.getLong("practiceDateMillis") ?: 0L
+        val stops = (doc.get("stops") as? List<*>)?.mapNotNull { mapToStop(it) } ?: emptyList()
+        val recommendedDepartureMillis = doc.getLong("recommendedDepartureMillis") ?: 0L
+        val totalDurationSec = (doc.getLong("totalDurationSec") ?: 0L).toInt()
+        val totalDistanceMeters = (doc.getLong("totalDistanceMeters") ?: 0L).toInt()
+        val polyline = doc.getString("polyline") ?: ""
+        val polylinePrecision = (doc.getLong("polylinePrecision") ?: 5L).toInt()
+        val status = doc.getString("status") ?: return null
+        val failureReason = doc.getString("failureReason")?.takeIf { it.isNotEmpty() }
+        val generatedAt = doc.getTimestamp("generatedAt")?.toDate()?.time
+        val generatedByUid = doc.getString("generatedByUid")?.takeIf { it.isNotEmpty() }
+        val missingAddressUids = (doc.get("missingAddressUids") as? List<*>)
+            ?.mapNotNull { it as? String } ?: emptyList()
+        val aiSummary = doc.getString("aiSummary")?.takeIf { it.isNotEmpty() }
+        val aiSummaryGeneratedAt = doc.getTimestamp("aiSummaryGeneratedAt")?.toDate()?.time
+        return CarpoolRoute(
+            id = id,
+            groupId = groupId,
+            practiceId = practiceId,
+            direction = direction,
+            driverUid = driverUid,
+            driverHomeLat = driverHomeLat,
+            driverHomeLng = driverHomeLng,
+            trainingLat = trainingLat,
+            trainingLng = trainingLng,
+            trainingStartTime = trainingStartTime,
+            trainingEndTime = trainingEndTime,
+            practiceDateMillis = practiceDateMillis,
+            stops = stops,
+            recommendedDepartureMillis = recommendedDepartureMillis,
+            totalDurationSec = totalDurationSec,
+            totalDistanceMeters = totalDistanceMeters,
+            polyline = polyline,
+            polylinePrecision = polylinePrecision,
+            status = status,
+            failureReason = failureReason,
+            generatedAt = generatedAt,
+            generatedByUid = generatedByUid,
+            missingAddressUids = missingAddressUids,
+            aiSummary = aiSummary,
+            aiSummaryGeneratedAt = aiSummaryGeneratedAt
+        )
+    }
+
+    private fun mapToStop(raw: Any?): RouteStop? {
+        val map = raw as? Map<*, *> ?: return null
+        val sequence = (map["sequence"] as? Number)?.toInt() ?: return null
+        val passengerUid = map["passengerUid"] as? String ?: return null
+        val passengerName = map["passengerName"] as? String ?: ""
+        val lat = (map["lat"] as? Number)?.toDouble() ?: return null
+        val lng = (map["lng"] as? Number)?.toDouble() ?: return null
+        val etaMillis = (map["etaMillis"] as? Number)?.toLong() ?: 0L
+        val legDurationSec = (map["legDurationSec"] as? Number)?.toInt() ?: 0
+        val legDistanceMeters = (map["legDistanceMeters"] as? Number)?.toInt() ?: 0
+        return RouteStop(
+            sequence = sequence,
+            passengerUid = passengerUid,
+            passengerName = passengerName,
+            lat = lat,
+            lng = lng,
+            etaMillis = etaMillis,
+            legDurationSec = legDurationSec,
+            legDistanceMeters = legDistanceMeters
+        )
     }
 
     companion object {

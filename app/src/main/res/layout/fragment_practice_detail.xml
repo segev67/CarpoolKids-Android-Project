@@ -350,6 +350,30 @@
                     android:text="@string/drive_request_cancel_drive"
                     android:visibility="gone" />
 
+                <!-- Phase 5 — temporary route-generation buttons, driver-only. Phase 6 replaces them
+                     with "View pickup route" / "View dropoff route" that open the map screen. -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/practice_detail_generate_pickup_route"
+                    style="@style/Widget.CarpoolKids.Button.Outlined"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_md"
+                    android:textSize="@dimen/text_badge_size"
+                    android:text="@string/route_generate_pickup"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/practice_detail_generate_dropoff_route"
+                    style="@style/Widget.CarpoolKids.Button.Outlined"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_xs"
+                    android:textSize="@dimen/text_badge_size"
+                    android:text="@string/route_generate_dropoff"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

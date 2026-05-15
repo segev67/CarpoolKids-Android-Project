@@ -21,4 +21,15 @@ object UserRepository {
     fun createUser(profile: UserProfile, callback: (Boolean, String?) -> Unit) {
         FirestoreManager.getInstance().createUserProfile(profile, callback)
     }
+
+    /** Phase 2 — store the user's home coordinates so routes can start/end here. */
+    fun updateHomeAddress(
+        uid: String,
+        lat: Double,
+        lng: Double,
+        label: String? = null,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        FirestoreManager.getInstance().updateHomeAddress(uid, lat, lng, label, callback)
+    }
 }

@@ -119,6 +119,14 @@
             android:imeOptions="actionDone" />
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/add_practice_pick_on_map"
+            style="@style/Widget.CarpoolKids.Button.Outlined"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_sm"
+            android:text="@string/add_practice_pick_on_map" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/add_practice_save"
             style="@style/Widget.CarpoolKids.Button"
             android:layout_width="match_parent"

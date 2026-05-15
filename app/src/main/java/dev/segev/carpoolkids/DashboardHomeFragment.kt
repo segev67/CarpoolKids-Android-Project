@@ -1,5 +1,6 @@
 package dev.segev.carpoolkids
 
+import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -9,6 +10,8 @@ import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -49,6 +52,8 @@ class DashboardHomeFragment : Fragment() {
     private var myRequestsListener: ListenerRegistration? = null
     private var currentUserRole: String = ""
     private var activeGroupId: String = ""
+    private var hasHomeAddress: Boolean = false
+    private lateinit var homeAddressPickerLauncher: ActivityResultLauncher<Intent>
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -63,6 +68,20 @@ class DashboardHomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         activeGroupId = arguments?.getString(ARG_GROUP_ID).orEmpty()
         binding.dashboardHomeBtnLeaveCarpool.visibility = View.GONE
+        binding.dashboardHomeHomeAddressBanner.visibility = View.GONE
+        homeAddressPickerLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (_binding == null) return@registerForActivityResult
+            if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
+            val coords = MapPickerActivity.extractResult(result.data) ?: return@registerForActivityResult
+            saveHomeAddress(coords.first, coords.second)
+        }
+        binding.dashboardHomeHomeAddressAction.setOnClickListener {
+            homeAddressPickerLauncher.launch(
+                MapPickerActivity.intentForHome(requireContext(), currentLat = null, currentLng = null)
+            )
+        }
         if (activeGroupId.isNotEmpty()) {
             loadGroupAndToday(activeGroupId)
         } else {
@@ -213,6 +232,36 @@ class DashboardHomeFragment : Fragment() {
                 ?: profile?.email?.takeIf { it.isNotBlank() }
                 ?: fallbackNameFromAuth()
             applyGreeting(name, profile?.role.orEmpty())
+            updateHomeAddressBanner(profile)
+        }
+    }
+
+    /** Show the home-address banner only when the user has no home coordinates yet. */
+    private fun updateHomeAddressBanner(profile: dev.segev.carpoolkids.model.UserProfile?) {
+        if (_binding == null) return
+        hasHomeAddress = profile?.homeLat != null && profile.homeLng != null
+        binding.dashboardHomeHomeAddressBanner.visibility =
+            if (!hasHomeAddress) View.VISIBLE else View.GONE
+    }
+
+    private fun saveHomeAddress(lat: Double, lng: Double) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+        if (uid.isBlank()) return
+        binding.dashboardHomeHomeAddressAction.isEnabled = false
+        UserRepository.updateHomeAddress(uid, lat, lng) { ok, err ->
+            if (_binding == null) return@updateHomeAddress
+            binding.dashboardHomeHomeAddressAction.isEnabled = true
+            if (ok) {
+                hasHomeAddress = true
+                binding.dashboardHomeHomeAddressBanner.visibility = View.GONE
+                Snackbar.make(binding.root, R.string.profile_home_saved, Snackbar.LENGTH_SHORT).show()
+            } else {
+                Snackbar.make(
+                    binding.root,
+                    err ?: getString(R.string.profile_home_save_error),
+                    Snackbar.LENGTH_LONG
+                ).show()
+            }
         }
     }
 

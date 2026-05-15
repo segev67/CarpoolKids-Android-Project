@@ -1,10 +1,14 @@
 package dev.segev.carpoolkids
 
+import android.app.Activity
 import android.content.DialogInterface
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import com.google.android.material.snackbar.Snackbar
@@ -30,6 +34,7 @@ class PracticeDetailFragment : Fragment() {
 
     private var practice: Practice? = null
     private var isCancelingPractice = false
+    private lateinit var mapPickerLauncher: ActivityResultLauncher<Intent>
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -51,8 +56,18 @@ class PracticeDetailFragment : Fragment() {
             return
         }
 
+        mapPickerLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (_binding == null) return@registerForActivityResult
+            if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
+            val coords = MapPickerActivity.extractResult(result.data) ?: return@registerForActivityResult
+            savePracticeCoords(coords.first, coords.second)
+        }
+
         binding.practiceDetailSave.setOnClickListener { save(groupId) }
         binding.practiceDetailCancelPractice.setOnClickListener { confirmCancelPractice() }
+        binding.practiceDetailSetLocationOnMap.setOnClickListener { openLocationPicker() }
         binding.practiceDetailRequestTo.setOnClickListener { requestDrive(groupId, DriveRequest.DIRECTION_TO) }
         binding.practiceDetailRequestFrom.setOnClickListener { requestDrive(groupId, DriveRequest.DIRECTION_FROM) }
         binding.practiceDetailIllTakeTo.setOnClickListener { selfDeclare(groupId, DriveRequest.DIRECTION_TO) }
@@ -95,6 +110,18 @@ class PracticeDetailFragment : Fragment() {
             if (isParent && !p.canceled) View.VISIBLE else View.GONE
         binding.practiceDetailCancelPractice.isEnabled = !isCancelingPractice
 
+        // Parents (only) can attach geo-coordinates to a practice via the map picker.
+        // Button text reflects whether coordinates already exist on this practice.
+        val canEditCoords = isParent && !p.canceled
+        binding.practiceDetailSetLocationOnMap.visibility =
+            if (canEditCoords) View.VISIBLE else View.GONE
+        binding.practiceDetailSetLocationOnMap.setText(
+            if (p.locationLat != null && p.locationLng != null)
+                R.string.practice_detail_change_location_on_map
+            else
+                R.string.practice_detail_set_location_on_map
+        )
+
         binding.practiceDetailDay.text = formatDayOfWeek(p.dateMillis)
         binding.practiceDetailDate.text = formatDate(p.dateMillis)
         binding.practiceDetailStartTime.setText(p.startTime)
@@ -120,6 +147,42 @@ class PracticeDetailFragment : Fragment() {
         binding.practiceDetailIllTakeFrom.visibility = if (p.driverFromUid.isNullOrBlank() && isParent) View.VISIBLE else View.GONE
         binding.practiceDetailCancelTo.visibility = if (p.driverToUid == currentUid) View.VISIBLE else View.GONE
         binding.practiceDetailCancelFrom.visibility = if (p.driverFromUid == currentUid) View.VISIBLE else View.GONE
+    }
+
+    private fun openLocationPicker() {
+        val p = practice ?: return
+        if (p.canceled) return
+        mapPickerLauncher.launch(
+            MapPickerActivity.intentForPracticeLocation(
+                requireContext(),
+                currentLat = p.locationLat,
+                currentLng = p.locationLng
+            )
+        )
+    }
+
+    private fun savePracticeCoords(lat: Double, lng: Double) {
+        val p = practice ?: return
+        binding.practiceDetailSetLocationOnMap.isEnabled = false
+        PracticeRepository.updateLocationCoords(p.id, lat, lng) { ok, err ->
+            if (_binding == null) return@updateLocationCoords
+            binding.practiceDetailSetLocationOnMap.isEnabled = true
+            if (ok) {
+                practice = p.copy(locationLat = lat, locationLng = lng)
+                practice?.let { bindPractice(it) }
+                Snackbar.make(
+                    binding.root,
+                    R.string.practice_detail_location_coords_saved,
+                    Snackbar.LENGTH_SHORT
+                ).show()
+            } else {
+                Snackbar.make(
+                    binding.root,
+                    err ?: getString(R.string.practice_detail_location_coords_save_error),
+                    Snackbar.LENGTH_LONG
+                ).show()
+            }
+        }
     }
 
     private fun confirmCancelPractice() {

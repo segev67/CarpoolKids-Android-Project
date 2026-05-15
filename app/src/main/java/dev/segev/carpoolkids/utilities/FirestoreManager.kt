@@ -501,7 +501,7 @@ class FirestoreManager private constructor(context: Context) {
     // ---------- Practices (Schedule tab) ----------
 
     fun createPractice(practice: Practice, callback: (Boolean, String?) -> Unit) {
-        val data = hashMapOf(
+        val data = hashMapOf<String, Any>(
             "id" to practice.id,
             "groupId" to practice.groupId,
             "date" to Timestamp(Date(practice.dateMillis)),
@@ -513,6 +513,8 @@ class FirestoreManager private constructor(context: Context) {
             "createdAt" to FieldValue.serverTimestamp()
         ).apply {
             practice.createdBy?.let { put("createdBy", it) }
+            practice.locationLat?.let { put("locationLat", it) }
+            practice.locationLng?.let { put("locationLng", it) }
         }
         db.collection(Constants.Firestore.COLLECTION_PRACTICES)
             .document(practice.id)
@@ -669,6 +671,62 @@ class FirestoreManager private constructor(context: Context) {
                 val list = snapshot?.documents?.mapNotNull { documentToPractice(it) }
                     ?.sortedWith(compareBy({ it.dateMillis }, { it.startTime })) ?: emptyList()
                 callback(list, null)
+            }
+    }
+
+    /**
+     * Phase 2 — Set or update a user's home coordinates. Used by the home-address map picker.
+     * Rules: users may write only their own document (existing rule).
+     */
+    fun updateHomeAddress(
+        uid: String,
+        lat: Double,
+        lng: Double,
+        label: String?,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        if (uid.isBlank()) {
+            callback(false, "Invalid user")
+            return
+        }
+        val updates = hashMapOf<String, Any>(
+            "homeLat" to lat,
+            "homeLng" to lng
+        )
+        label?.takeIf { it.isNotBlank() }?.let { updates["homeAddressLabel"] = it }
+        db.collection(Constants.Firestore.COLLECTION_USERS)
+            .document(uid)
+            .update(updates)
+            .addOnSuccessListener { callback(true, null) }
+            .addOnFailureListener { e ->
+                callback(false, e.message ?: "Failed to save home address")
+            }
+    }
+
+    /**
+     * Phase 2 — Set or update a practice's geographic coordinates.
+     * Rules: any group member may update; UI is gated to parents.
+     */
+    fun updateLocationCoords(
+        practiceId: String,
+        lat: Double,
+        lng: Double,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        if (practiceId.isBlank()) {
+            callback(false, "Invalid practice id")
+            return
+        }
+        val updates = hashMapOf<String, Any>(
+            "locationLat" to lat,
+            "locationLng" to lng
+        )
+        db.collection(Constants.Firestore.COLLECTION_PRACTICES)
+            .document(practiceId)
+            .update(updates)
+            .addOnSuccessListener { callback(true, null) }
+            .addOnFailureListener { e ->
+                callback(false, e.message ?: "Failed to save coordinates")
             }
     }
 

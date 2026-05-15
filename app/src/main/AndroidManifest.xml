@@ -54,6 +54,14 @@
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.CarpoolKids" />
+        <activity
+            android:name=".MapPickerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CarpoolKids" />
+        <activity
+            android:name=".SetHomeAddressActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CarpoolKids" />
     </application>
 
 </manifest>

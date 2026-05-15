@@ -1,10 +1,14 @@
 package dev.segev.carpoolkids
 
+import android.app.Activity
 import android.app.DatePickerDialog
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
@@ -23,6 +27,12 @@ class AddPracticeFragment : Fragment() {
     /** Selected date as start-of-day millis. */
     private var selectedDateMillis: Long = 0L
 
+    /** Coordinates picked via [MapPickerActivity]; null until the parent picks a pin. */
+    private var pickedLat: Double? = null
+    private var pickedLng: Double? = null
+
+    private lateinit var mapPickerLauncher: ActivityResultLauncher<Intent>
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -40,7 +50,23 @@ class AddPracticeFragment : Fragment() {
         selectedDateMillis = if (defaultDateMillis > 0L) defaultDateMillis else getTodayStartMillis()
         updateDateLabel()
 
+        mapPickerLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (_binding == null) return@registerForActivityResult
+            if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
+            val coords = MapPickerActivity.extractResult(result.data) ?: return@registerForActivityResult
+            pickedLat = coords.first
+            pickedLng = coords.second
+            binding.addPracticePickOnMap.text = getString(R.string.add_practice_pick_on_map_set)
+        }
+
         binding.addPracticeDate.setOnClickListener { showDatePicker() }
+        binding.addPracticePickOnMap.setOnClickListener {
+            mapPickerLauncher.launch(
+                MapPickerActivity.intentForPracticeLocation(requireContext(), pickedLat, pickedLng)
+            )
+        }
         binding.addPracticeSave.setOnClickListener { save(groupId) }
     }
 
@@ -137,7 +163,9 @@ class AddPracticeFragment : Fragment() {
             startTime,
             endTime,
             location,
-            createdBy
+            createdBy,
+            pickedLat,
+            pickedLng
         ) { _, error ->
             if (_binding == null) return@createPractice
             if (error == null) {

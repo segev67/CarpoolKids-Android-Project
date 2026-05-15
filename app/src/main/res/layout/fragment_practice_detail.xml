@@ -144,6 +144,16 @@
             android:hint="@string/practice_detail_hint_location"
             android:imeOptions="actionNext" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/practice_detail_set_location_on_map"
+            style="@style/Widget.CarpoolKids.Button.Outlined"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_sm"
+            android:text="@string/practice_detail_set_location_on_map"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/practice_detail_transport_card"
             style="@style/Widget.CarpoolKids.CardView.Dashboard"

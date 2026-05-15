@@ -56,6 +56,8 @@ object PracticeRepository {
         endTime: String,
         location: String,
         createdBy: String?,
+        locationLat: Double? = null,
+        locationLng: Double? = null,
         callback: (Practice?, String?) -> Unit
     ) {
         val id = UUID.randomUUID().toString()
@@ -68,11 +70,23 @@ object PracticeRepository {
             location = location.trim(),
             driverToUid = null,
             driverFromUid = null,
-            createdBy = createdBy
+            createdBy = createdBy,
+            locationLat = locationLat,
+            locationLng = locationLng
         )
         FirestoreManager.getInstance().createPractice(practice) { success, error ->
             if (success) callback(practice, null) else callback(null, error)
         }
+    }
+
+    /** Phase 2 — set or update the practice's lat/lng (set via the map picker). */
+    fun updateLocationCoords(
+        practiceId: String,
+        lat: Double,
+        lng: Double,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        FirestoreManager.getInstance().updateLocationCoords(practiceId, lat, lng, callback)
     }
 
     fun updatePractice(

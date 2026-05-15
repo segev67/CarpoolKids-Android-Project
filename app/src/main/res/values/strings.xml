@@ -212,4 +212,32 @@
     <string name="join_requests_empty">No join requests.</string>
     <string name="blocked_users_empty">No blocked users.</string>
     <string name="join_request_requester_unknown">User</string>
+
+    <!-- Map picker (Phase 2 — route feature) -->
+    <string name="map_picker_title">Pick a location</string>
+    <string name="map_picker_title_home">Set your home</string>
+    <string name="map_picker_title_practice">Set practice location</string>
+    <string name="map_picker_hint">Long-press anywhere on the map to drop a pin. Long-press again to move it.</string>
+    <string name="map_picker_confirm">Confirm</string>
+    <string name="map_picker_select_first">Long-press the map to select a point first.</string>
+
+    <!-- Home address (Phase 2 — route feature) -->
+    <string name="profile_home_banner_text">Set your home address to enable shared carpool routes.</string>
+    <string name="profile_home_banner_action">Set home</string>
+    <string name="profile_home_saved">Home address saved.</string>
+    <string name="profile_home_save_error">Could not save home address. Try again.</string>
+
+    <!-- Set home address onboarding screen (after Choose Role) -->
+    <string name="set_home_address_title">Set your home address</string>
+    <string name="set_home_address_explanation">We use your home address to plan shared carpool routes. You can set it now or skip and add it later from the Home tab.</string>
+    <string name="set_home_address_set_button">Set on map</string>
+    <string name="set_home_address_skip_button">Skip for now</string>
+
+    <!-- Practice location coords (Phase 2 — route feature) -->
+    <string name="add_practice_pick_on_map">Pick on map</string>
+    <string name="add_practice_pick_on_map_set">Pin set ✓</string>
+    <string name="practice_detail_set_location_on_map">Set location on map</string>
+    <string name="practice_detail_change_location_on_map">Change location on map</string>
+    <string name="practice_detail_location_coords_saved">Location coordinates saved.</string>
+    <string name="practice_detail_location_coords_save_error">Could not save coordinates. Try again.</string>
 </resources>

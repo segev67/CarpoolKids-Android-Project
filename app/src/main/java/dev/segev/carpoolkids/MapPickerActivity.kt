@@ -2,7 +2,12 @@ package dev.segev.carpoolkids
 
 import android.app.Activity
 import android.content.Intent
+import android.location.Address
+import android.location.Geocoder
+import android.os.Build
 import android.os.Bundle
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -13,6 +18,7 @@ import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.material.snackbar.Snackbar
 import dev.segev.carpoolkids.databinding.ActivityMapPickerBinding
+import java.util.Locale
 
 /**
  * Pick a coordinate on a map. Long-press anywhere to drop / move a pin; tap Confirm to return.
@@ -53,9 +59,94 @@ class MapPickerActivity : AppCompatActivity(), OnMapReadyCallback {
         binding.mapPickerConfirm.setOnClickListener { confirm() }
         binding.mapPickerConfirm.isEnabled = hasInitialPin
 
+        binding.mapPickerSearchButton.setOnClickListener {
+            performGeocodeSearch(binding.mapPickerSearchQuery.text?.toString().orEmpty())
+        }
+        binding.mapPickerSearchQuery.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                performGeocodeSearch(binding.mapPickerSearchQuery.text?.toString().orEmpty())
+                true
+            } else false
+        }
+        // Some devices ship without a geocoder backend — hide the field then so users aren't fooled.
+        if (!Geocoder.isPresent()) {
+            binding.mapPickerSearchQuery.visibility = android.view.View.GONE
+            binding.mapPickerSearchButton.visibility = android.view.View.GONE
+        }
+
         val mapFragment = supportFragmentManager
             .findFragmentById(R.id.map_picker_map) as SupportMapFragment
         mapFragment.getMapAsync(this)
+    }
+
+    /**
+     * Geocode [query] using the Android Geocoder (no external service / API key). API 33+ has an
+     * async callback variant; older versions block on a background thread to avoid ANR.
+     */
+    private fun performGeocodeSearch(query: String) {
+        val q = query.trim()
+        if (q.isEmpty()) return
+        if (!Geocoder.isPresent()) {
+            Snackbar.make(binding.root, R.string.map_picker_search_unavailable, Snackbar.LENGTH_LONG).show()
+            return
+        }
+        // Dismiss IME so the user can see the map result.
+        (getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager)
+            ?.hideSoftInputFromWindow(binding.mapPickerSearchQuery.windowToken, 0)
+
+        binding.mapPickerSearchButton.isEnabled = false
+        val geocoder = Geocoder(this, Locale.getDefault())
+        if (Build.VERSION.SDK_INT >= 33) {
+            geocoder.getFromLocationName(q, 1, object : Geocoder.GeocodeListener {
+                override fun onGeocode(addresses: MutableList<Address>) {
+                    runOnUiThread {
+                        binding.mapPickerSearchButton.isEnabled = true
+                        applyGeocodeResult(addresses)
+                    }
+                }
+                override fun onError(errorMessage: String?) {
+                    runOnUiThread {
+                        binding.mapPickerSearchButton.isEnabled = true
+                        Snackbar.make(binding.root, R.string.map_picker_search_failed, Snackbar.LENGTH_LONG).show()
+                    }
+                }
+            })
+        } else {
+            // Pre-33: getFromLocationName is synchronous and may hit the network; off the main thread.
+            Thread {
+                val results: List<Address>? = try {
+                    @Suppress("DEPRECATION")
+                    geocoder.getFromLocationName(q, 1)
+                } catch (_: Exception) {
+                    null
+                }
+                runOnUiThread {
+                    binding.mapPickerSearchButton.isEnabled = true
+                    if (results == null) {
+                        Snackbar.make(binding.root, R.string.map_picker_search_failed, Snackbar.LENGTH_LONG).show()
+                    } else {
+                        applyGeocodeResult(results)
+                    }
+                }
+            }.start()
+        }
+    }
+
+    private fun applyGeocodeResult(addresses: List<Address>) {
+        if (addresses.isEmpty()) {
+            Snackbar.make(binding.root, R.string.map_picker_search_no_results, Snackbar.LENGTH_LONG).show()
+            return
+        }
+        val target = LatLng(addresses[0].latitude, addresses[0].longitude)
+        val map = googleMap ?: return
+        map.animateCamera(CameraUpdateFactory.newLatLngZoom(target, 15f))
+        val existing = marker
+        if (existing == null) {
+            marker = map.addMarker(MarkerOptions().position(target))
+        } else {
+            existing.position = target
+        }
+        binding.mapPickerConfirm.isEnabled = true
     }
 
     override fun onMapReady(map: GoogleMap) {

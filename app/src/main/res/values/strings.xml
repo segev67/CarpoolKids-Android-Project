@@ -220,6 +220,11 @@
     <string name="map_picker_hint">Long-press anywhere on the map to drop a pin. Long-press again to move it.</string>
     <string name="map_picker_confirm">Confirm</string>
     <string name="map_picker_select_first">Long-press the map to select a point first.</string>
+    <string name="map_picker_search_hint">Search address or place</string>
+    <string name="map_picker_search_button">Search</string>
+    <string name="map_picker_search_no_results">No locations found. Try a different search.</string>
+    <string name="map_picker_search_failed">Search failed. Check your connection.</string>
+    <string name="map_picker_search_unavailable">Search isn\'t available on this device. Long-press the map to drop a pin.</string>
 
     <!-- Home address (Phase 2 — route feature) -->
     <string name="profile_home_banner_text">Set your home address to enable shared carpool routes.</string>

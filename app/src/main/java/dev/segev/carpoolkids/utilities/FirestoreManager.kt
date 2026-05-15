@@ -57,6 +57,9 @@ class FirestoreManager private constructor(context: Context) {
         val createdAt = doc.getTimestamp("createdAt")?.toDate()?.time
         val parentUids = (doc.get("parentUids") as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
         val childUids = (doc.get("childUids") as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
+        val homeLat = doc.getDouble("homeLat")
+        val homeLng = doc.getDouble("homeLng")
+        val homeAddressLabel = doc.getString("homeAddressLabel")?.takeIf { it.isNotEmpty() }
         return UserProfile(
             uid,
             doc.getString("email"),
@@ -65,7 +68,10 @@ class FirestoreManager private constructor(context: Context) {
             photoUrl,
             createdAt,
             parentUids,
-            childUids
+            childUids,
+            homeLat,
+            homeLng,
+            homeAddressLabel
         )
     }
 
@@ -822,6 +828,10 @@ class FirestoreManager private constructor(context: Context) {
         val canceledAt = doc.getTimestamp("canceledAt")?.toDate()?.time
         val canceledByUid = doc.getString("canceledByUid")
         val cancelReason = doc.getString("cancelReason")
+        val locationLat = doc.getDouble("locationLat")
+        val locationLng = doc.getDouble("locationLng")
+        val participantUids = (doc.get("participantUids") as? List<*>)
+            ?.mapNotNull { it as? String } ?: emptyList()
         return Practice(
             id,
             groupId,
@@ -836,7 +846,10 @@ class FirestoreManager private constructor(context: Context) {
             canceled,
             canceledAt,
             canceledByUid,
-            cancelReason
+            cancelReason,
+            locationLat,
+            locationLng,
+            participantUids
         )
     }
 

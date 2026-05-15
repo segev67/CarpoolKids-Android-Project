@@ -12,5 +12,9 @@ data class UserProfile(
     val photoUrl: String? = null,
     val createdAt: Long? = null,
     val parentUids: List<String> = emptyList(),
-    val childUids: List<String> = emptyList()
+    val childUids: List<String> = emptyList(),
+    /** Home coordinates used as the pickup point / driver origin for carpool routes. */
+    val homeLat: Double? = null,
+    val homeLng: Double? = null,
+    val homeAddressLabel: String? = null
 )

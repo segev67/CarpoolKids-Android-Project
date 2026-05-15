@@ -16,6 +16,20 @@ class Constants {
         const val COLLECTION_JOIN_REQUESTS: String = "join_requests"
         const val COLLECTION_PRACTICES: String = "practices"
         const val COLLECTION_DRIVE_REQUESTS: String = "drive_requests"
+        const val COLLECTION_CARPOOL_ROUTES: String = "carpool_routes"
+    }
+
+    object RouteDirection {
+        const val PICKUP: String = "PICKUP"
+        const val DROPOFF: String = "DROPOFF"
+    }
+
+    object RouteStatus {
+        const val GENERATING: String = "GENERATING"
+        const val READY: String = "READY"
+        const val FAILED: String = "FAILED"
+        const val STALE: String = "STALE"
+        const val EMPTY_ROSTER: String = "EMPTY_ROSTER"
     }
 
     object LinkCode {

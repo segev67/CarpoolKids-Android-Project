@@ -20,5 +20,10 @@ data class Practice(
     val canceled: Boolean = false,
     val canceledAt: Long? = null,
     val canceledByUid: String? = null,
-    val cancelReason: String? = null
+    val cancelReason: String? = null,
+    /** Practice location coordinates (set via map picker). Required for route generation. */
+    val locationLat: Double? = null,
+    val locationLng: Double? = null,
+    /** Children riding this practice (TO + FROM share the same roster). */
+    val participantUids: List<String> = emptyList()
 )

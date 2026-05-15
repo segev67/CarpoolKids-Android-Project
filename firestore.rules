@@ -99,5 +99,30 @@ service cloud.firestore {
         && resource.data.groupId != null
         && request.auth.uid in get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.memberIds;
     }
+
+    // Carpool routes: one document per (practiceId, direction). Doc id is "{practiceId}_PICKUP" or "{practiceId}_DROPOFF".
+    // Read: any group member. Create/Update/Delete: only the assigned driver for that direction on the practice.
+    match /carpool_routes/{routeId} {
+      allow read: if request.auth != null
+        && resource.data.groupId != null
+        && request.auth.uid in get(/databases/$(database)/documents/groups/$(resource.data.groupId)).data.memberIds;
+
+      allow create: if request.auth != null
+        && request.resource.data.groupId != null
+        && request.auth.uid in get(/databases/$(database)/documents/groups/$(request.resource.data.groupId)).data.memberIds
+        && request.resource.data.driverUid == request.auth.uid
+        && (
+          (request.resource.data.direction == 'PICKUP'
+            && get(/databases/$(database)/documents/practices/$(request.resource.data.practiceId)).data.driverToUid == request.auth.uid)
+          || (request.resource.data.direction == 'DROPOFF'
+            && get(/databases/$(database)/documents/practices/$(request.resource.data.practiceId)).data.driverFromUid == request.auth.uid)
+        );
+
+      allow update: if request.auth != null
+        && resource.data.driverUid == request.auth.uid;
+
+      allow delete: if request.auth != null
+        && resource.data.driverUid == request.auth.uid;
+    }
   }
 }

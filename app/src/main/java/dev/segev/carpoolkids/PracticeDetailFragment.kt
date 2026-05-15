@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,6 +12,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import com.google.android.gms.maps.model.LatLng
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import dev.segev.carpoolkids.data.DriveRequestRepository
@@ -19,8 +21,16 @@ import dev.segev.carpoolkids.data.UserRepository
 import dev.segev.carpoolkids.databinding.FragmentPracticeDetailBinding
 import dev.segev.carpoolkids.model.DriveRequest
 import dev.segev.carpoolkids.model.Practice
+import dev.segev.carpoolkids.routing.EtaCalculator
+import dev.segev.carpoolkids.routing.OsrmClient
+import dev.segev.carpoolkids.routing.PolylineDecoder
+import dev.segev.carpoolkids.routing.RouteOrderHeuristic
 import dev.segev.carpoolkids.utilities.Constants
+import okhttp3.Call
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import java.util.UUID
 
 /**
@@ -41,6 +51,9 @@ class PracticeDetailFragment : Fragment() {
     private lateinit var mapPickerLauncher: ActivityResultLauncher<Intent>
     /** Separate launcher for the post-join "set your home address" tip so its result writes to the user profile, not to the practice. */
     private lateinit var homeMapPickerLauncher: ActivityResultLauncher<Intent>
+
+    /** Phase 4 debug: hold the OSRM Call so we can cancel it if the view is destroyed mid-flight. */
+    private var debugOsrmCall: Call? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -98,6 +111,14 @@ class PracticeDetailFragment : Fragment() {
 
         binding.practiceDetailSave.setOnClickListener { save(groupId) }
         binding.practiceDetailCancelPractice.setOnClickListener { confirmCancelPractice() }
+
+        // PHASE 4 DEBUG — remove before submission.
+        // Long-press the title to fire a hardcoded OSRM request and log the routing pipeline result.
+        // Filter Logcat for tag "RouteDebug" to inspect order, ETAs, polyline length, and totals.
+        binding.practiceDetailTitle.setOnLongClickListener {
+            debugFireTestRoute()
+            true
+        }
         binding.practiceDetailSetLocationOnMap.setOnClickListener { openLocationPicker() }
         binding.practiceDetailJoinButton.setOnClickListener { toggleJoinPractice() }
         binding.practiceDetailRequestTo.setOnClickListener { requestDrive(groupId, DriveRequest.DIRECTION_TO) }
@@ -123,6 +144,8 @@ class PracticeDetailFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        debugOsrmCall?.cancel()
+        debugOsrmCall = null
         _binding = null
     }
 
@@ -621,10 +644,77 @@ class PracticeDetailFragment : Fragment() {
         return "$day $month ${c.get(Calendar.YEAR)}"
     }
 
+    /**
+     * PHASE 4 DEBUG — remove before submission.
+     *
+     * Runs the full Phase 4 routing pipeline against a hardcoded Tel Aviv fixture: greedy ordering,
+     * OSRM call, polyline decode, ETA math. Everything is dumped to Logcat under tag "RouteDebug"
+     * so the math can be verified without any UI work. Triggered by long-pressing the screen title.
+     */
+    private fun debugFireTestRoute() {
+        if (debugOsrmCall != null) {
+            Log.d(DEBUG_TAG, "Test route already in flight; ignoring tap")
+            return
+        }
+        val driverHome = LatLng(32.0853, 34.7818)
+        val practiceLoc = LatLng(32.1100, 34.8000)
+        val stops = listOf(
+            "kid-A" to LatLng(32.0900, 34.7700),
+            "kid-B" to LatLng(32.0950, 34.7900),
+            "kid-C" to LatLng(32.0820, 34.7950)
+        )
+        val ordered = RouteOrderHeuristic.greedyOrder(driverHome, stops, practiceLoc)
+        val coords = listOf(driverHome) + ordered.map { it.second } + practiceLoc
+        Log.d(DEBUG_TAG, "Visit order: ${ordered.joinToString(" → ") { it.first }}")
+
+        debugOsrmCall = OsrmClient.fetchRoute(coords) { result, err ->
+            debugOsrmCall = null
+            if (err != null || result == null) {
+                Log.w(DEBUG_TAG, "OSRM failed: ${err ?: "null result"}")
+                return@fetchRoute
+            }
+            val km = result.totalDistanceMeters / 1000.0
+            val minutes = result.totalDurationSec / 60.0
+            Log.d(
+                DEBUG_TAG,
+                "Route: %.2f km, %.1f min, polyline=%d chars, legs=%d".format(
+                    Locale.US, km, minutes, result.polyline.length, result.legs.size
+                )
+            )
+            val decoded = PolylineDecoder.decode(result.polyline)
+            Log.d(DEBUG_TAG, "Decoded polyline points: ${decoded.size}")
+
+            val pretendStart = System.currentTimeMillis() + 60 * 60_000L
+            val departure = EtaCalculator.recommendedDeparture(
+                trainingStartMillis = pretendStart,
+                totalLegSec = result.totalDurationSec,
+                numStops = ordered.size,
+                dwellSec = DEBUG_DWELL_SEC,
+                bufferSec = DEBUG_BUFFER_SEC
+            )
+            val etas = EtaCalculator.etaPerStop(
+                departureMs = departure,
+                legDurations = result.legs.map { it.durationSec },
+                dwellSec = DEBUG_DWELL_SEC
+            )
+            val fmt = SimpleDateFormat("HH:mm:ss", Locale.US)
+            Log.d(DEBUG_TAG, "Pretend practice start: ${fmt.format(Date(pretendStart))}")
+            Log.d(DEBUG_TAG, "Recommended depart:     ${fmt.format(Date(departure))}")
+            etas.forEachIndexed { i, eta ->
+                val label = if (i < ordered.size) ordered[i].first else "practice"
+                Log.d(DEBUG_TAG, "ETA #$i ($label): ${fmt.format(Date(eta))}")
+            }
+        }
+    }
+
     companion object {
         private const val ARG_PRACTICE_ID = "practice_id"
         private const val ARG_GROUP_ID = "group_id"
         private const val ARG_ROLE = "role"
+
+        private const val DEBUG_TAG = "RouteDebug"
+        private const val DEBUG_DWELL_SEC = 60
+        private const val DEBUG_BUFFER_SEC = 300
 
         fun newInstance(practiceId: String, groupId: String, role: String): PracticeDetailFragment =
             PracticeDetailFragment().apply {

@@ -12,10 +12,10 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.commit
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
-import dev.segev.carpoolkids.data.CarpoolRouteRepository
 import dev.segev.carpoolkids.data.DriveRequestRepository
 import dev.segev.carpoolkids.data.PracticeRepository
 import dev.segev.carpoolkids.data.UserRepository
@@ -55,8 +55,6 @@ class PracticeDetailFragment : Fragment() {
 
     /** Phase 4 debug: hold the OSRM Call so we can cancel it if the view is destroyed mid-flight. */
     private var debugOsrmCall: Call? = null
-    /** Phase 5 — disables the generate buttons while a request is in flight to prevent double-fires. */
-    private var isGeneratingRoute = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -130,11 +128,11 @@ class PracticeDetailFragment : Fragment() {
         binding.practiceDetailIllTakeFrom.setOnClickListener { selfDeclare(groupId, DriveRequest.DIRECTION_FROM) }
         binding.practiceDetailCancelTo.setOnClickListener { cancelDrive(groupId, DriveRequest.DIRECTION_TO) }
         binding.practiceDetailCancelFrom.setOnClickListener { cancelDrive(groupId, DriveRequest.DIRECTION_FROM) }
-        binding.practiceDetailGeneratePickupRoute.setOnClickListener {
-            generateRoute(Constants.RouteDirection.PICKUP)
+        binding.practiceDetailViewPickupRoute.setOnClickListener {
+            openRouteScreen(Constants.RouteDirection.PICKUP)
         }
-        binding.practiceDetailGenerateDropoffRoute.setOnClickListener {
-            generateRoute(Constants.RouteDirection.DROPOFF)
+        binding.practiceDetailViewDropoffRoute.setOnClickListener {
+            openRouteScreen(Constants.RouteDirection.DROPOFF)
         }
 
         PracticeRepository.getPracticeById(practiceId) { p, error ->
@@ -218,22 +216,18 @@ class PracticeDetailFragment : Fragment() {
             binding.practiceDetailIllTakeFrom.visibility = View.GONE
             binding.practiceDetailCancelTo.visibility = View.GONE
             binding.practiceDetailCancelFrom.visibility = View.GONE
-            binding.practiceDetailGeneratePickupRoute.visibility = View.GONE
-            binding.practiceDetailGenerateDropoffRoute.visibility = View.GONE
+            binding.practiceDetailViewPickupRoute.visibility = View.GONE
+            binding.practiceDetailViewDropoffRoute.visibility = View.GONE
             return
         }
 
-        // Phase 5 — show "Generate ... route" only to the driver assigned to that direction, and
-        // only when the practice has coords (otherwise generation fails on the validation step).
-        val hasCoords = p.locationLat != null && p.locationLng != null
-        val canGeneratePickup = hasCoords && p.driverToUid == currentUid
-        val canGenerateDropoff = hasCoords && p.driverFromUid == currentUid
-        binding.practiceDetailGeneratePickupRoute.visibility =
-            if (canGeneratePickup) View.VISIBLE else View.GONE
-        binding.practiceDetailGenerateDropoffRoute.visibility =
-            if (canGenerateDropoff) View.VISIBLE else View.GONE
-        binding.practiceDetailGeneratePickupRoute.isEnabled = !isGeneratingRoute
-        binding.practiceDetailGenerateDropoffRoute.isEnabled = !isGeneratingRoute
+        // Phase 6 — surface "View ... route" to every group member as soon as a driver claims the
+        // direction. The route screen itself handles the "not generated yet" empty state and gates
+        // the generate/regenerate CTAs to the assigned driver.
+        binding.practiceDetailViewPickupRoute.visibility =
+            if (!p.driverToUid.isNullOrBlank()) View.VISIBLE else View.GONE
+        binding.practiceDetailViewDropoffRoute.visibility =
+            if (!p.driverFromUid.isNullOrBlank()) View.VISIBLE else View.GONE
 
         binding.practiceDetailRequestTo.visibility = if (p.driverToUid.isNullOrBlank()) View.VISIBLE else View.GONE
         binding.practiceDetailRequestFrom.visibility = if (p.driverFromUid.isNullOrBlank()) View.VISIBLE else View.GONE
@@ -575,41 +569,17 @@ class PracticeDetailFragment : Fragment() {
         }
     }
 
-    /**
-     * Phase 5 — temporary entry point: fire the route-generation pipeline and toast the outcome.
-     * Phase 6 replaces this with a button that opens the route screen, which will trigger generation
-     * itself when no route doc exists yet.
-     */
-    private fun generateRoute(direction: String) {
+    /** Phase 6 — open the shared route screen. Visible to every group member when a driver exists. */
+    private fun openRouteScreen(direction: String) {
         val p = practice ?: return
-        if (p.canceled || isGeneratingRoute) return
-        val uid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
-        if (uid.isBlank()) return
-        isGeneratingRoute = true
-        binding.practiceDetailGeneratePickupRoute.isEnabled = false
-        binding.practiceDetailGenerateDropoffRoute.isEnabled = false
-        Snackbar.make(binding.root, R.string.route_generating, Snackbar.LENGTH_SHORT).show()
-        CarpoolRouteRepository.generateAndSave(p.id, direction, uid) { route, err ->
-            if (_binding == null) return@generateAndSave
-            isGeneratingRoute = false
-            binding.practiceDetailGeneratePickupRoute.isEnabled = true
-            binding.practiceDetailGenerateDropoffRoute.isEnabled = true
-            if (route == null) {
-                Snackbar.make(
-                    binding.root,
-                    getString(R.string.route_generation_failed, err ?: "unknown error"),
-                    Snackbar.LENGTH_LONG
-                ).show()
-                return@generateAndSave
-            }
-            val message = when (route.status) {
-                Constants.RouteStatus.EMPTY_ROSTER ->
-                    getString(R.string.route_generated_empty_toast)
-                Constants.RouteStatus.FAILED ->
-                    getString(R.string.route_generation_failed, err ?: route.failureReason ?: "OSRM error")
-                else -> getString(R.string.route_generated_toast, route.status)
-            }
-            Snackbar.make(binding.root, message, Snackbar.LENGTH_LONG).show()
+        if (p.canceled) return
+        parentFragmentManager.commit {
+            replace(
+                R.id.dashboard_fragment_container,
+                CarpoolRouteFragment.newInstance(p.id, direction),
+                "carpool_route"
+            )
+            addToBackStack("carpool_route")
         }
     }
 

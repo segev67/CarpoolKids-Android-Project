@@ -66,12 +66,22 @@ class GroupDetailsFragment : Fragment() {
                     val displayName = profile?.displayName.orEmpty().trim().ifBlank { profile?.email.orEmpty().trim() }.ifBlank { getString(R.string.join_request_requester_unknown) }
                     val email = profile?.email.orEmpty().trim()
                     val role = profile?.role ?: Constants.UserRole.PARENT
+                    val lat = profile?.homeLat
+                    val lng = profile?.homeLng
+                    val homeAddressLine = if (lat != null && lng != null) {
+                        val label = profile.homeAddressLabel?.takeIf { it.isNotBlank() }
+                            ?: getString(R.string.profile_home_coords_format, lat, lng)
+                        getString(R.string.profile_home_set_label, label)
+                    } else {
+                        getString(R.string.group_details_member_home_unset)
+                    }
                     GroupMemberRow(
                         uid = uid,
                         displayName = displayName,
                         email = email,
                         role = role,
-                        isCurrentUser = uid == currentUid
+                        isCurrentUser = uid == currentUid,
+                        homeAddressLine = homeAddressLine
                     )
                 }
                 val parents = rows.count { it.role == Constants.UserRole.PARENT }

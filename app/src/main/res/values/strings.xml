@@ -231,6 +231,10 @@
     <string name="profile_home_banner_action">Set home</string>
     <string name="profile_home_saved">Home address saved.</string>
     <string name="profile_home_save_error">Could not save home address. Try again.</string>
+    <string name="profile_home_set_label">Home: %1$s</string>
+    <string name="profile_home_edit_action">Edit</string>
+    <string name="profile_home_coords_format">%1$.4f, %2$.4f</string>
+    <string name="group_details_member_home_unset">Home not set</string>
 
     <!-- Set home address onboarding screen (after Choose Role) -->
     <string name="set_home_address_title">Set your home address</string>
@@ -270,7 +274,6 @@
     <string name="route_screen_title_pickup">Pickup route</string>
     <string name="route_screen_title_dropoff">Dropoff route</string>
     <string name="route_back_content_description">Back</string>
-    <string name="route_open_in_google_maps">Open in Google Maps</string>
     <string name="route_regenerate">Regenerate</string>
     <string name="route_generate_now">Generate route</string>
     <string name="route_leave_by">Leave by</string>
@@ -288,7 +291,7 @@
     <string name="route_not_generated_member">The driver hasn\'t generated the route yet.</string>
     <string name="route_empty_roster">No riders are signed up for this practice yet.</string>
     <string name="route_failed_state">Route generation failed: %1$s</string>
-    <string name="route_missing_addresses">⚠ Some riders have no address: %1$s</string>
+    <string name="route_missing_addresses">Some riders have no address: %1$s</string>
     <string name="route_no_practice">Could not load practice details.</string>
 
     <!-- Phase 7 — edge states + stale detection -->
@@ -299,6 +302,8 @@
     <string name="route_state_failed_with_retry">Route generation failed: %1$s</string>
     <string name="route_state_stale_driver">Riders changed since this route was generated — tap Regenerate to refresh.</string>
     <string name="route_state_stale_member">Riders changed since this route was generated — ask the driver to regenerate.</string>
+    <string name="route_state_stale_location_driver">Practice location changed — tap Regenerate to refresh.</string>
+    <string name="route_state_stale_location_member">Practice location changed — ask the driver to regenerate.</string>
     <string name="route_retry">Retry</string>
 
     <!-- Phase 8 — polish -->

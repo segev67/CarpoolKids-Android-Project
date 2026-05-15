@@ -148,7 +148,10 @@ class DriversRequestsFragment : Fragment() {
                 options.add(p to DriveRequest.DIRECTION_TO)
                 options.add(p to DriveRequest.DIRECTION_FROM)
             }
-            val labels = options.map { (p, dir) -> "${formatPracticeDateShort(p.dateMillis)} – $dir" }
+            val labels = options.map { (p, dir) ->
+                val time = p.startTime.takeIf { it.isNotBlank() } ?: "—"
+                "${formatPracticeDateShort(p.dateMillis)} · $time – $dir"
+            }
             AlertDialog.Builder(requireContext())
                 .setTitle(title)
                 .setItems(labels.toTypedArray()) { _, which ->

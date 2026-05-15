@@ -147,7 +147,7 @@
                 android:textColor="@color/status_pending_orange"
                 android:textSize="12sp"
                 android:visibility="gone"
-                tools:text="⚠ Some riders have no address: Daniel, Maya"
+                tools:text="Some riders have no address"
                 tools:visibility="visible" />
 
             <com.google.android.material.textview.MaterialTextView
@@ -207,20 +207,9 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/route_regenerate"
                 style="@style/Widget.CarpoolKids.Button.Outlined"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:text="@string/route_regenerate"
-                android:textSize="@dimen/text_badge_size" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/route_open_in_maps"
-                style="@style/Widget.CarpoolKids.Button"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/spacing_sm"
-                android:layout_weight="1"
-                android:text="@string/route_open_in_google_maps"
                 android:textSize="@dimen/text_badge_size" />
         </LinearLayout>
     </LinearLayout>

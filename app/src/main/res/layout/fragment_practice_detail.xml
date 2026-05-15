@@ -128,6 +128,7 @@
             android:textSize="@dimen/text_section_label_size"
             android:textColor="@color/dashboard_text_secondary" />
 
+        <!-- Read-only: the location string is set by the map picker (reverse-geocoded) — no manual typing. -->
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/practice_detail_location"
             android:layout_width="match_parent"
@@ -135,14 +136,17 @@
             android:minHeight="@dimen/button_min_height"
             android:padding="@dimen/card_padding"
             android:background="@color/dashboard_card_background"
-            android:inputType="text"
+            android:cursorVisible="false"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:inputType="none"
+            android:longClickable="false"
             android:textSize="@dimen/text_card_time_size"
             android:textColor="@color/dashboard_text_primary"
             android:textColorHint="@color/dashboard_text_secondary"
             android:maxLines="2"
             android:ellipsize="end"
-            android:hint="@string/practice_detail_hint_location"
-            android:imeOptions="actionNext" />
+            android:hint="@string/practice_detail_hint_location" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/practice_detail_set_location_on_map"

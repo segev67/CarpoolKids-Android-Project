@@ -1,8 +1,6 @@
 package dev.segev.carpoolkids
 
 import android.animation.ValueAnimator
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.text.format.DateUtils
 import android.view.LayoutInflater
@@ -123,7 +121,6 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
         binding.routeRegenerate.setOnClickListener { generateRoute() }
         binding.routeStateAction.setOnClickListener { generateRoute() }
         binding.routeStateBannerAction.setOnClickListener { generateRoute() }
-        binding.routeOpenInMaps.setOnClickListener { openInGoogleMaps() }
 
         val mapFragment = childFragmentManager.findFragmentById(R.id.route_map) as? SupportMapFragment
         mapFragment?.getMapAsync(this)
@@ -342,38 +339,57 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
             binding.routeSummaryGeneratedAgo.visibility = View.GONE
         }
 
-        // Action row
-        binding.routeActionsRow.visibility = View.VISIBLE
+        // Action row — only the driver gets the Regenerate button, so hide the whole row otherwise.
+        binding.routeActionsRow.visibility = if (isAssignedDriver) View.VISIBLE else View.GONE
         binding.routeRegenerate.visibility = if (isAssignedDriver) View.VISIBLE else View.GONE
         binding.routeRegenerate.isEnabled = !isGenerating
-        binding.routeOpenInMaps.visibility =
-            if (route.stops.isNotEmpty()) View.VISIBLE else View.GONE
 
         // Stale banner — only meaningful when we actually have a practice snapshot to compare to,
         // and only when we're not already regenerating (avoids the noisy mid-flight banner flicker).
-        if (practice != null && !isGenerating && isRouteStale(route, practice)) {
-            showBanner(
-                text = getString(
-                    if (isAssignedDriver) R.string.route_state_stale_driver
-                    else R.string.route_state_stale_member
-                ),
-                actionVisible = isAssignedDriver
-            )
+        // Location change is checked before roster change so the message reflects the bigger geometry
+        // shift when both happen at once.
+        if (practice != null && !isGenerating) {
+            val reason = computeStaleReason(route, practice)
+            if (reason != null) {
+                val text = getString(
+                    when (reason) {
+                        StaleReason.LOCATION ->
+                            if (isAssignedDriver) R.string.route_state_stale_location_driver
+                            else R.string.route_state_stale_location_member
+                        StaleReason.ROSTER ->
+                            if (isAssignedDriver) R.string.route_state_stale_driver
+                            else R.string.route_state_stale_member
+                    }
+                )
+                showBanner(text = text, actionVisible = isAssignedDriver)
+            }
         }
 
         drawRouteOnMap(route)
     }
 
+    private enum class StaleReason { LOCATION, ROSTER }
+
     /**
-     * Stale iff the riders covered by the route (routed stops + skipped missing-address uids) no
-     * longer match `practice.participantUids` exactly. Set comparison catches joins, leaves, and
-     * the swap case where one rider replaces another between regenerations.
+     * Returns the reason the route is stale, or null when it's up to date. Location change takes
+     * precedence because it affects the polyline directly; the roster check is a set comparison
+     * (joins, leaves, and the swap case where one rider replaces another between regenerations).
      */
-    private fun isRouteStale(route: CarpoolRoute, practice: Practice): Boolean {
+    private fun computeStaleReason(route: CarpoolRoute, practice: Practice): StaleReason? {
+        val practiceLat = practice.locationLat
+        val practiceLng = practice.locationLng
+        if (practiceLat != null && practiceLng != null) {
+            val latDiff = kotlin.math.abs(route.trainingLat - practiceLat)
+            val lngDiff = kotlin.math.abs(route.trainingLng - practiceLng)
+            if (latDiff > COORD_STALE_EPSILON || lngDiff > COORD_STALE_EPSILON) {
+                return StaleReason.LOCATION
+            }
+        }
         val routeCoverage =
             (route.stops.map { it.passengerUid } + route.missingAddressUids).toSet()
         val participants = practice.participantUids.toSet()
-        return routeCoverage != participants
+        if (routeCoverage != participants) return StaleReason.ROSTER
+        return null
     }
 
     private fun missingDisplayNames(route: CarpoolRoute): String =
@@ -536,35 +552,15 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
         }
     }
 
-    private fun openInGoogleMaps() {
-        val route = this.route ?: return
-        // Aim at the first stop (or the destination if there are no stops). Driver re-launches per
-        // segment as they finish each pickup/dropoff — multi-waypoint deep links require a different
-        // URL scheme that the plan didn't lock in for MVP.
-        val first = route.stops.firstOrNull()
-        val (lat, lng) = if (first != null) {
-            first.lat to first.lng
-        } else if (route.direction == Constants.RouteDirection.PICKUP) {
-            route.trainingLat to route.trainingLng
-        } else {
-            route.driverHomeLat to route.driverHomeLng
-        }
-        val uri = Uri.parse("google.navigation:q=$lat,$lng")
-        val intent = Intent(Intent.ACTION_VIEW, uri).apply { setPackage("com.google.android.apps.maps") }
-        runCatching {
-            startActivity(intent)
-        }.onFailure {
-            // Fall back to a generic geo intent if Google Maps isn't installed.
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:$lat,$lng?q=$lat,$lng")))
-        }
-    }
-
     companion object {
         private const val ARG_PRACTICE_ID = "practice_id"
         private const val ARG_DIRECTION = "direction"
 
         private const val POLYLINE_WIDTH_PX = 14f
         private const val CAMERA_PADDING_PX = 160
+
+        /** ~1 m of latitude/longitude. Below this we treat the practice coords as unchanged. */
+        private const val COORD_STALE_EPSILON = 1e-5
 
         // Phase 8 — animation timings.
         private const val CAMERA_ANIMATION_MS = 600

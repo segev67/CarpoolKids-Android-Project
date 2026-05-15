@@ -10,21 +10,84 @@ import kotlin.math.sqrt
  * Greedy nearest-neighbor stop ordering for a single carpool route.
  *
  * Distance metric is Haversine — close enough to real road distances for ordering decisions with
- * n ≤ ~6 stops, and cheap enough to run on the main thread. After the greedy pass we do one tail
- * 2-opt swap that uses [end] to decide whether the last two stops should be reversed; this avoids
- * the classic nearest-neighbor failure where the algorithm strands a far stop in the final slot
- * just because every closer candidate was picked earlier.
+ * n ≤ ~6 stops, and cheap enough to run on the main thread.
+ *
+ * **Cluster-then-route guard** (post-Phase-8): before running greedy we partition stops into a
+ * "regulars" cluster (close to the practice) and an "outliers" set (a 3× distance jump beyond the
+ * cluster). Outliers are always placed at the home-adjacent end of the route — for PICKUP that's
+ * the start (driver picks them up first, then sweeps through the regulars on the way to practice);
+ * for DROPOFF that's the end (driver drops the regulars first, then heads out to the outliers
+ * alone). The previous TSP-style total-distance optimum could drag a Nahariya rider to the middle
+ * of a Tel Aviv route, trapping the close kids in the car for the long detour — this guard prevents
+ * that without touching the n=2..6 happy path.
+ *
+ * When no outliers are detected, the original greedy + tail 2-opt swap behavior is preserved.
  */
 object RouteOrderHeuristic {
+
+    /** A stop counts as an outlier when its distance to the practice is ≥ this multiple of the next-closer stop's distance. */
+    private const val OUTLIER_GAP_RATIO = 3.0
+    /** Floor on the "previous distance" used in the gap check, so a 5 m vs 25 m hop isn't called a cluster boundary. */
+    private const val OUTLIER_MIN_BASE_METERS = 500.0
+    private const val EARTH_RADIUS_M = 6_371_000.0
 
     fun greedyOrder(
         start: LatLng,
         stops: List<Pair<String, LatLng>>,
-        end: LatLng
+        end: LatLng,
+        practiceLoc: LatLng
     ): List<Pair<String, LatLng>> {
         if (stops.isEmpty()) return emptyList()
-        val ordered = nearestNeighborFrom(start, stops)
-        return maybeSwapTail(start, ordered, end)
+        val (regulars, outliers) = partitionOutliers(stops, practiceLoc)
+        if (outliers.isEmpty()) {
+            val ordered = nearestNeighborFrom(start, stops)
+            return maybeSwapTail(start, ordered, end)
+        }
+        // Outliers are pinned to the home-adjacent end. Whichever endpoint is the practice, the
+        // *other* endpoint is the driver's home, and the outliers go next to it. We figure out
+        // which side that is by comparing distance — one of them is the practice itself (distance ~0).
+        val homeIsStart = haversineMeters(practiceLoc, end) < haversineMeters(practiceLoc, start)
+        return if (homeIsStart) {
+            // PICKUP shape: home → outliers → regulars → practice. Greedy nearest-neighbor inside
+            // each cluster so multi-outlier or multi-regular cases still hop sensibly.
+            val outliersOrder = nearestNeighborFrom(start, outliers)
+            val cursor = outliersOrder.lastOrNull()?.second ?: start
+            val regularsOrder = nearestNeighborFrom(cursor, regulars)
+            outliersOrder + regularsOrder
+        } else {
+            // DROPOFF shape: practice → regulars → outliers → home.
+            val regularsOrder = nearestNeighborFrom(start, regulars)
+            val cursor = regularsOrder.lastOrNull()?.second ?: start
+            val outliersOrder = nearestNeighborFrom(cursor, outliers)
+            regularsOrder + outliersOrder
+        }
+    }
+
+    /**
+     * Split [stops] into (regulars, outliers). An outlier is any stop in or beyond the first ≥3×
+     * Haversine gap when sorted ascending by distance from [practiceLoc]. For n=1 nothing is ever
+     * flagged; for n=2 the rule reduces to a single ratio check on the pair.
+     */
+    private fun partitionOutliers(
+        stops: List<Pair<String, LatLng>>,
+        practiceLoc: LatLng
+    ): Pair<List<Pair<String, LatLng>>, List<Pair<String, LatLng>>> {
+        if (stops.size < 2) return stops to emptyList()
+        val sorted = stops
+            .map { it to haversineMeters(practiceLoc, it.second) }
+            .sortedBy { it.second }
+        var splitIdx = sorted.size
+        for (i in 1 until sorted.size) {
+            val prev = sorted[i - 1].second
+            val curr = sorted[i].second
+            if (prev > OUTLIER_MIN_BASE_METERS && curr > OUTLIER_GAP_RATIO * prev) {
+                splitIdx = i
+                break
+            }
+        }
+        val regulars = sorted.subList(0, splitIdx).map { it.first }
+        val outliers = sorted.subList(splitIdx, sorted.size).map { it.first }
+        return regulars to outliers
     }
 
     private fun nearestNeighborFrom(
@@ -72,8 +135,6 @@ object RouteOrderHeuristic {
         out[n - 1] = ordered[n - 2]
         return out
     }
-
-    private const val EARTH_RADIUS_M = 6_371_000.0
 
     private fun haversineMeters(a: LatLng, b: LatLng): Double {
         val lat1 = Math.toRadians(a.latitude)

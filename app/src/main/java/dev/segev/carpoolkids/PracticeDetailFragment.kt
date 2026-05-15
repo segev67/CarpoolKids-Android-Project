@@ -694,7 +694,7 @@ class PracticeDetailFragment : Fragment() {
             "kid-B" to LatLng(32.0950, 34.7900),
             "kid-C" to LatLng(32.0820, 34.7950)
         )
-        val ordered = RouteOrderHeuristic.greedyOrder(driverHome, stops, practiceLoc)
+        val ordered = RouteOrderHeuristic.greedyOrder(driverHome, stops, practiceLoc, practiceLoc)
         val coords = listOf(driverHome) + ordered.map { it.second } + practiceLoc
         Log.d(DEBUG_TAG, "Visit order: ${ordered.joinToString(" → ") { it.first }}")
 

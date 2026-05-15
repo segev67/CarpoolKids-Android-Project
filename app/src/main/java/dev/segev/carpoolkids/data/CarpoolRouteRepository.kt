@@ -154,7 +154,7 @@ object CarpoolRouteRepository {
         val origin = if (isPickup) driverHome else practiceLoc
         val destination = if (isPickup) practiceLoc else driverHome
         val orderInput = routed.map { it.uid to it.coords }
-        val ordered = RouteOrderHeuristic.greedyOrder(origin, orderInput, destination)
+        val ordered = RouteOrderHeuristic.greedyOrder(origin, orderInput, destination, practiceLoc)
         // Re-attach the routed-passenger info to the ordered uids so we have names for the stops.
         val routedByUid = routed.associateBy { it.uid }
         val orderedPassengers = ordered.mapNotNull { (uid, _) -> routedByUid[uid] }

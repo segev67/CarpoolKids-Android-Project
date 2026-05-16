@@ -90,7 +90,8 @@ class LoginActivity : AppCompatActivity() {
         if (FirebaseAuth.getInstance().currentUser == null)
             signIn()
         else
-            checkUserProfileAndNavigate()
+            // Cached auth token from a previous launch — not a fresh sign-in.
+            checkUserProfileAndNavigate(freshSignIn = false)
     }
 
     // Wire button click listeners.
@@ -100,7 +101,8 @@ class LoginActivity : AppCompatActivity() {
             signIn()
         }
         binding.btnRetryProfile.setOnClickListener {
-            checkUserProfileAndNavigate()
+            // Retry after a network/profile error — same treatment as a cached session.
+            checkUserProfileAndNavigate(freshSignIn = false)
         }
     }
 
@@ -124,15 +126,25 @@ class LoginActivity : AppCompatActivity() {
     // Handle result from Firebase Auth UI (success → check profile; failure → show error).
     private fun onSignInResult(result: FirebaseAuthUIAuthenticationResult) {
         if (result.resultCode == RESULT_OK) {
-            checkUserProfileAndNavigate()
+            checkUserProfileAndNavigate(freshSignIn = true)
         } else {
             val isEmailCollision = isEmailAlreadyInUseError(result)
             showSignUpErrorUi(isEmailCollision)
         }
     }
 
-    // Load user profile from Firestore; go to dashboard/choose-role or show error.
-    private fun checkUserProfileAndNavigate() {
+    /**
+     * Load the user profile and route accordingly.
+     *
+     * - `freshSignIn = true` is the "the user just completed FirebaseUI in this session" path.
+     *   A missing profile is the normal first-time signup state — send the user to ChooseRole.
+     * - `freshSignIn = false` is the "we resumed a cached Auth session from a previous launch"
+     *   path. A missing profile means the Firestore profile (or the server-side Auth user) was
+     *   wiped while the local token kept living. We force a sign-out + re-login so the user
+     *   re-establishes valid credentials *before* writing a fresh profile / groups / etc.,
+     *   avoiding orphaned Firestore data tied to a stale uid.
+     */
+    private fun checkUserProfileAndNavigate(freshSignIn: Boolean) {
         val user = FirebaseAuth.getInstance().currentUser ?: return
         hideSignUpErrorUi()
         hideProfileErrorUi()
@@ -141,7 +153,13 @@ class LoginActivity : AppCompatActivity() {
             showProfileProgress(false)
             when {
                 profile != null -> navigateAfterLogin(user.uid, profile.role)
-                errorMessage == "Profile not found" -> navigateToChooseRole()
+                errorMessage == "Profile not found" -> {
+                    if (freshSignIn) {
+                        navigateToChooseRole()
+                    } else {
+                        AuthUI.getInstance().signOut(this).addOnCompleteListener { signIn() }
+                    }
+                }
                 else -> showProfileErrorUi(errorMessage ?: getString(R.string.profile_load_error))
             }
         }

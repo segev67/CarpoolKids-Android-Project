@@ -17,3 +17,9 @@ local.properties
 # JVM crash dumps (generated when java.exe / gradle crashes)
 hs_err_pid*.log
 replay_pid*.log
+
+# IDE / editor state (machine-specific)
+.idea/
+.kotlin/
+.cursor/
+*.code-workspace

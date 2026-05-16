@@ -172,32 +172,41 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
         if (routeListener != null) return
         val routeId = CarpoolRouteRepository.routeId(practiceId, direction)
         routeListener = CarpoolRouteRepository.listenToRoute(routeId) { incoming ->
-            if (_binding == null) return@listenToRoute
-            route = incoming
-            // Refresh missing-name cache only when the uid set actually changes — avoids hammering
-            // Firestore each time the listener fires for an unrelated field change.
-            val newKey = incoming?.missingAddressUids?.toSet().orEmpty()
-            if (newKey != missingNamesFetchKey) {
-                missingNamesFetchKey = newKey
-                if (newKey.isEmpty()) {
-                    missingNamesByUid = emptyMap()
-                } else {
-                    UserRepository.getUsersByIds(newKey.toList()) { profileMap ->
-                        if (_binding == null) return@getUsersByIds
-                        // Late update: only apply if the same set is still the one we wanted.
-                        if (missingNamesFetchKey == newKey) {
-                            missingNamesByUid = profileMap.mapValues { (_, profile) ->
-                                profile.displayName?.takeIf { it.isNotBlank() }
-                                    ?: profile.email?.takeIf { it.isNotBlank() }
-                                    ?: profile.uid
-                            }
-                            render()
+            applyIncomingRoute(incoming)
+        }
+    }
+
+    /**
+     * Single entry point for updating the local route state. Used both by the snapshot listener
+     * (remote / cross-device updates) and by the generate callback as a workaround for Firestore
+     * sometimes not firing the listener for the same client's own create-write of a brand-new doc.
+     */
+    private fun applyIncomingRoute(incoming: CarpoolRoute?) {
+        if (_binding == null) return
+        route = incoming
+        // Refresh missing-name cache only when the uid set actually changes — avoids hammering
+        // Firestore each time the listener fires for an unrelated field change.
+        val newKey = incoming?.missingAddressUids?.toSet().orEmpty()
+        if (newKey != missingNamesFetchKey) {
+            missingNamesFetchKey = newKey
+            if (newKey.isEmpty()) {
+                missingNamesByUid = emptyMap()
+            } else {
+                UserRepository.getUsersByIds(newKey.toList()) { profileMap ->
+                    if (_binding == null) return@getUsersByIds
+                    // Late update: only apply if the same set is still the one we wanted.
+                    if (missingNamesFetchKey == newKey) {
+                        missingNamesByUid = profileMap.mapValues { (_, profile) ->
+                            profile.displayName?.takeIf { it.isNotBlank() }
+                                ?: profile.email?.takeIf { it.isNotBlank() }
+                                ?: profile.uid
                         }
+                        render()
                     }
                 }
             }
-            render()
         }
+        render()
     }
 
     private fun render() {
@@ -477,15 +486,28 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
         }
 
         // Camera: fit all included points. Use a bounds builder so single-stop routes still frame.
-        // Phase 8: animateCamera with a duration so the framing feels intentional rather than abrupt.
+        // The four-arg `newLatLngBounds(bounds, width, height, padding)` overload is used here so
+        // the camera animation works even when the map view hasn't been laid out yet — the
+        // two-arg form throws on unmeasured maps, which silently broke the first generate-tap.
+        // Display metrics are a sane fallback when the map dimensions are still 0.
         val boundsBuilder = LatLngBounds.builder()
             .include(origin)
             .include(destination)
         route.stops.forEach { boundsBuilder.include(LatLng(it.lat, it.lng)) }
         polyPoints.forEach { boundsBuilder.include(it) }
+        val mapView = _binding?.routeMap
+        val cameraW = (mapView?.width?.takeIf { it > 0 }
+            ?: resources.displayMetrics.widthPixels)
+        val cameraH = (mapView?.height?.takeIf { it > 0 }
+            ?: (resources.displayMetrics.heightPixels / 2))
         runCatching {
             map.animateCamera(
-                CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), CAMERA_PADDING_PX),
+                CameraUpdateFactory.newLatLngBounds(
+                    boundsBuilder.build(),
+                    cameraW,
+                    cameraH,
+                    CAMERA_PADDING_PX
+                ),
                 CAMERA_ANIMATION_MS,
                 null
             )
@@ -547,9 +569,13 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
                     getString(R.string.route_generation_failed, err ?: "unknown error"),
                     Snackbar.LENGTH_LONG
                 ).show()
+                render()
+                return@generateAndSave
             }
-            // Listener will re-render on success/failure persistence.
-            render()
+            // Firestore doesn't always fire the snapshot listener for our own client's first
+            // create-write of a brand-new doc — apply the result directly so the UI doesn't
+            // wait for a listener tick that may never come.
+            applyIncomingRoute(generated)
         }
     }
 

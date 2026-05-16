@@ -44,6 +44,7 @@
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="@color/dashboard_text_primary"
+                android:textDirection="ltr"
                 android:textSize="@dimen/text_card_time_size"
                 android:textStyle="bold"
                 tools:text="Daniel" />
@@ -77,7 +78,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textColor="@color/dashboard_text_secondary"
-            android:textSize="12sp"
+            android:textSize="@dimen/text_caption_size"
             tools:text="1.2 km from previous" />
     </LinearLayout>
 

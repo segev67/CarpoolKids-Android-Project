@@ -27,6 +27,7 @@ import dev.segev.carpoolkids.routing.OsrmClient
 import dev.segev.carpoolkids.routing.PolylineDecoder
 import dev.segev.carpoolkids.routing.RouteOrderHeuristic
 import dev.segev.carpoolkids.utilities.Constants
+import dev.segev.carpoolkids.utilities.bidiSafe
 import okhttp3.Call
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -204,7 +205,7 @@ class PracticeDetailFragment : Fragment() {
         binding.practiceDetailDate.text = formatDate(p.dateMillis)
         binding.practiceDetailStartTime.setText(p.startTime)
         binding.practiceDetailEndTime.setText(p.endTime)
-        binding.practiceDetailLocation.setText(p.location)
+        binding.practiceDetailLocation.setText(bidiSafe(p.location))
         val noDriver = getString(R.string.schedule_no_driver)
         binding.practiceDetailDriverToValue.text = noDriver
         binding.practiceDetailDriverFromValue.text = noDriver
@@ -348,7 +349,7 @@ class PracticeDetailFragment : Fragment() {
                     ?: profileMap[uid]?.email?.takeIf { it.isNotBlank() }
             }
             binding.practiceDetailRidersValue.text =
-                if (names.isNotEmpty()) names.joinToString(", ")
+                if (names.isNotEmpty()) names.joinToString(", ") { bidiSafe(it) }
                 else getString(R.string.join_request_requester_unknown)
         }
     }
@@ -607,8 +608,8 @@ class PracticeDetailFragment : Fragment() {
                         ?: getString(R.string.join_request_requester_unknown)
                 }
             } ?: noDriver
-            binding.practiceDetailDriverToValue.text = toName
-            binding.practiceDetailDriverFromValue.text = fromName
+            binding.practiceDetailDriverToValue.text = bidiSafe(toName)
+            binding.practiceDetailDriverFromValue.text = bidiSafe(fromName)
         }
     }
 

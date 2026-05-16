@@ -65,7 +65,7 @@
                 android:layout_height="24dp"
                 android:src="@drawable/ic_clock"
                 android:scaleType="fitCenter"
-                android:contentDescription="@null"
+                android:importantForAccessibility="no"
                 app:tint="@color/dashboard_text_secondary" />
 
             <com.google.android.material.textview.MaterialTextView
@@ -88,7 +88,7 @@
                 android:layout_height="24dp"
                 android:src="@drawable/ic_location"
                 android:scaleType="fitCenter"
-                android:contentDescription="@null"
+                android:importantForAccessibility="no"
                 app:tint="@color/dashboard_text_secondary" />
 
             <com.google.android.material.textview.MaterialTextView
@@ -98,7 +98,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/spacing_xs"
                 android:maxLines="2"
-                android:ellipsize="end" />
+                android:ellipsize="end"
+                android:textDirection="ltr" />
         </LinearLayout>
 
         <LinearLayout

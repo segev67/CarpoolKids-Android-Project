@@ -144,6 +144,7 @@
             android:textSize="@dimen/text_card_time_size"
             android:textColor="@color/dashboard_text_primary"
             android:textColorHint="@color/dashboard_text_secondary"
+            android:textDirection="ltr"
             android:maxLines="2"
             android:ellipsize="end"
             android:hint="@string/practice_detail_hint_location" />
@@ -201,7 +202,7 @@
                     android:layout_marginTop="@dimen/spacing_sm"
                     android:text="@string/practice_join_already_pending"
                     android:textColor="@color/status_pending_orange"
-                    android:textSize="12sp"
+                    android:textSize="@dimen/text_caption_size"
                     android:visibility="gone"
                     tools:visibility="visible" />
 
@@ -212,7 +213,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_md"
                     android:textColor="@color/dashboard_text_secondary"
-                    android:textSize="12sp"
+                    android:textSize="@dimen/text_caption_size"
                     android:visibility="gone"
                     tools:text="Riders (3)"
                     tools:visibility="visible" />
@@ -223,6 +224,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_xs"
                     android:textColor="@color/dashboard_text_primary"
+                    android:textDirection="ltr"
                     android:textSize="@dimen/text_card_day_size"
                     android:visibility="gone"
                     tools:text="Daniel, Maya, Yossi"
@@ -235,7 +237,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_md"
                     android:text="@string/practice_detail_to_practice"
-                    android:textSize="12sp"
+                    android:textSize="@dimen/text_caption_size"
                     android:textColor="@color/dashboard_text_secondary" />
 
                 <com.google.android.material.textview.MaterialTextView
@@ -245,6 +247,7 @@
                     android:layout_marginTop="@dimen/spacing_xs"
                     android:textSize="@dimen/text_card_day_size"
                     android:textColor="@color/dashboard_text_primary"
+                    android:textDirection="ltr"
                     android:maxLines="1"
                     android:ellipsize="end"
                     tools:text="Rachel Israeli" />
@@ -298,7 +301,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_md"
                     android:text="@string/practice_detail_from_practice"
-                    android:textSize="12sp"
+                    android:textSize="@dimen/text_caption_size"
                     android:textColor="@color/dashboard_text_secondary" />
 
                 <com.google.android.material.textview.MaterialTextView
@@ -308,6 +311,7 @@
                     android:layout_marginTop="@dimen/spacing_xs"
                     android:textSize="@dimen/text_card_day_size"
                     android:textColor="@color/dashboard_text_primary"
+                    android:textDirection="ltr"
                     android:maxLines="1"
                     android:ellipsize="end"
                     tools:text="Rachel Israeli" />

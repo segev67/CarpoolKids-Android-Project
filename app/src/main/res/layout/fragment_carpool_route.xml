@@ -145,7 +145,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/spacing_xs"
                 android:textColor="@color/status_pending_orange"
-                android:textSize="12sp"
+                android:textSize="@dimen/text_caption_size"
                 android:visibility="gone"
                 tools:text="Some riders have no address"
                 tools:visibility="visible" />
@@ -156,7 +156,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/spacing_xs"
                 android:textColor="@color/dashboard_text_secondary"
-                android:textSize="12sp"
+                android:textSize="@dimen/text_caption_size"
                 android:visibility="gone"
                 tools:text="Generated 2 minutes ago"
                 tools:visibility="visible" />

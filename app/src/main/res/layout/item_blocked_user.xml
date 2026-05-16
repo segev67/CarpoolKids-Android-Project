@@ -30,6 +30,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/btn_unblock"
-            android:textSize="12sp" />
+            android:textSize="@dimen/text_caption_size" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

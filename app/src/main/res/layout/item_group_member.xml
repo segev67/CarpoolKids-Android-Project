@@ -31,7 +31,7 @@
                 android:textStyle="bold"
                 android:maxLines="1"
                 android:ellipsize="end"
-                tools:text="Jane Doe" />
+                tools:text="Daniel Daniel" />
 
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/item_member_you_badge"
@@ -75,6 +75,7 @@
             android:textColor="@color/dashboard_text_secondary"
             android:maxLines="2"
             android:ellipsize="end"
+            android:textDirection="ltr"
             tools:text="Home: 12 Rothschild Blvd, Tel Aviv" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

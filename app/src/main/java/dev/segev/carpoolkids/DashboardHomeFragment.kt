@@ -27,6 +27,7 @@ import dev.segev.carpoolkids.data.TrainingRepository
 import dev.segev.carpoolkids.data.TrainingRepositoryImpl
 import dev.segev.carpoolkids.data.UserRepository
 import dev.segev.carpoolkids.databinding.FragmentDashboardHomeBinding
+import dev.segev.carpoolkids.utilities.bidiSafe
 import dev.segev.carpoolkids.model.DriveRequest
 import dev.segev.carpoolkids.model.JoinRequest
 import dev.segev.carpoolkids.model.Practice
@@ -215,7 +216,7 @@ class DashboardHomeFragment : Fragment() {
         fun applyGreeting(displayName: String, role: String) {
             if (_binding == null) return
             currentUserRole = role
-            binding.dashboardHomeHelloUser.text = getString(R.string.home_hello_user, displayName)
+            binding.dashboardHomeHelloUser.text = getString(R.string.home_hello_user, bidiSafe(displayName))
             binding.dashboardHomeHelloUser.visibility = View.VISIBLE
             // Leave applies only when this dashboard has a selected group (not whether user is "in a carpool" elsewhere).
             val hasSelectedGroup = activeGroupId.isNotBlank()
@@ -262,7 +263,7 @@ class DashboardHomeFragment : Fragment() {
             val label = profile?.homeAddressLabel?.takeIf { it.isNotBlank() }
                 ?: getString(R.string.profile_home_coords_format, lat, lng)
             binding.dashboardHomeHomeAddressText.text =
-                getString(R.string.profile_home_set_label, label)
+                getString(R.string.profile_home_set_label, bidiSafe(label))
             binding.dashboardHomeHomeAddressAction.setText(R.string.profile_home_edit_action)
         } else {
             binding.dashboardHomeHomeAddressText.setText(R.string.profile_home_banner_text)

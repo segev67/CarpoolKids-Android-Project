@@ -36,6 +36,7 @@ import dev.segev.carpoolkids.routing.PolylineDecoder
 import dev.segev.carpoolkids.ui.route.NumberedMarkerFactory
 import dev.segev.carpoolkids.ui.route.RouteStopsAdapter
 import dev.segev.carpoolkids.utilities.Constants
+import dev.segev.carpoolkids.utilities.bidiSafe
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -394,7 +395,7 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
 
     private fun missingDisplayNames(route: CarpoolRoute): String =
         route.missingAddressUids.joinToString(", ") { uid ->
-            missingNamesByUid[uid] ?: uid
+            bidiSafe(missingNamesByUid[uid] ?: uid)
         }
 
     private fun showBanner(text: String, actionVisible: Boolean) {

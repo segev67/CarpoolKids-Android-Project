@@ -8,6 +8,7 @@ import dev.segev.carpoolkids.R
 import dev.segev.carpoolkids.databinding.ItemRouteStopBinding
 import dev.segev.carpoolkids.model.RouteStop
 import dev.segev.carpoolkids.utilities.Constants
+import dev.segev.carpoolkids.utilities.bidiSafe
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -60,7 +61,7 @@ class RouteStopsAdapter(
         fun bind(stop: RouteStop, direction: String, currentUserUid: String) {
             val ctx = binding.root.context
             binding.itemRouteStopNumber.text = (stop.sequence + 1).toString()
-            binding.itemRouteStopName.text = stop.passengerName.ifBlank { stop.passengerUid }
+            binding.itemRouteStopName.text = bidiSafe(stop.passengerName.ifBlank { stop.passengerUid })
             binding.itemRouteStopYouBadge.visibility =
                 if (stop.passengerUid == currentUserUid) View.VISIBLE else View.GONE
 

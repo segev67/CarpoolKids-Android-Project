@@ -4,8 +4,6 @@
 
 ![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android&logoColor=white)
 ![Language](https://img.shields.io/badge/Language-Kotlin-7F52FF?logo=kotlin&logoColor=white)
-![minSdk](https://img.shields.io/badge/minSdk-24-blue)
-![targetSdk](https://img.shields.io/badge/targetSdk-34-blue)
 ![Firebase](https://img.shields.io/badge/Firebase-Auth%20%2B%20Firestore-FFCA28?logo=firebase&logoColor=black)
 ![Maps](https://img.shields.io/badge/Google%20Maps-SDK-4285F4?logo=googlemaps&logoColor=white)
 ![Routing](https://img.shields.io/badge/Routing-OSRM-2ECC71)

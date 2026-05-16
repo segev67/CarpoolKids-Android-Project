@@ -1,6 +1,6 @@
 # 🚗 CarpoolKids
 
-> **Smart carpool coordination for parents and children — share practice schedules, request rides, and view AI-optimized pickup routes in real time.**
+> **Smart carpool coordination for parents and children — share practice schedules, request rides, and view routes in real time.**
 
 ![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android&logoColor=white)
 ![Language](https://img.shields.io/badge/Language-Kotlin-7F52FF?logo=kotlin&logoColor=white)
@@ -77,7 +77,7 @@
 
 ---
 
-## 🤖 AI-Powered Shared Carpool Route Planning
+## Shared Carpool Route Planning
 
 The flagship feature. When a parent claims TO or FROM driver for a practice, the app can generate an optimized multi-stop route, persist it to Firestore, and stream it live to every group member.
 
@@ -159,10 +159,10 @@ Splash → Login → ChooseRole → SetHomeAddress (optional)
    │              │
    │              ▼
    │      CarpoolRouteFragment ◄── flagship route screen
-   │              │
-   ▼              ▼
- "My Address"   MapPickerActivity (long-press, address search, reverse geocode)
-  banner
+   │
+   ├─ "My Address" banner ──► MapPickerActivity (long-press, address search, reverse geocode)
+   ├─ Today's Practice card
+   └─ My Requests list - join to carpool + status (Pending / Approved / Declined).
 ```
 
 ### Major activities

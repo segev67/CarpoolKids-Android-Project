@@ -227,6 +227,7 @@
     <string name="map_picker_search_unavailable">Search isn\'t available on this device. Long-press the map to drop a pin.</string>
 
     <!-- Home address (Phase 2 — route feature) -->
+    <string name="profile_home_section_title">My Address</string>
     <string name="profile_home_banner_text">Set your home address to enable shared carpool routes.</string>
     <string name="profile_home_banner_action">Set home</string>
     <string name="profile_home_saved">Home address saved.</string>

@@ -1,5 +1,6 @@
 package dev.segev.carpoolkids
 
+import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -9,6 +10,8 @@ import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -24,6 +27,7 @@ import dev.segev.carpoolkids.data.TrainingRepository
 import dev.segev.carpoolkids.data.TrainingRepositoryImpl
 import dev.segev.carpoolkids.data.UserRepository
 import dev.segev.carpoolkids.databinding.FragmentDashboardHomeBinding
+import dev.segev.carpoolkids.utilities.bidiSafe
 import dev.segev.carpoolkids.model.DriveRequest
 import dev.segev.carpoolkids.model.JoinRequest
 import dev.segev.carpoolkids.model.Practice
@@ -49,6 +53,11 @@ class DashboardHomeFragment : Fragment() {
     private var myRequestsListener: ListenerRegistration? = null
     private var currentUserRole: String = ""
     private var activeGroupId: String = ""
+    private var hasHomeAddress: Boolean = false
+    /** Cached home coords so the Edit action can pre-load the map picker without a second fetch. */
+    private var currentHomeLat: Double? = null
+    private var currentHomeLng: Double? = null
+    private lateinit var homeAddressPickerLauncher: ActivityResultLauncher<Intent>
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -63,6 +72,26 @@ class DashboardHomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         activeGroupId = arguments?.getString(ARG_GROUP_ID).orEmpty()
         binding.dashboardHomeBtnLeaveCarpool.visibility = View.GONE
+        binding.dashboardHomeHomeAddressBanner.visibility = View.GONE
+        homeAddressPickerLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (_binding == null) return@registerForActivityResult
+            if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
+            val coords = MapPickerActivity.extractResult(result.data) ?: return@registerForActivityResult
+            val address = MapPickerActivity.extractAddress(result.data)
+            saveHomeAddress(coords.first, coords.second, address)
+        }
+        binding.dashboardHomeHomeAddressAction.setOnClickListener {
+            // When editing, pre-load the picker at the saved home so the user only nudges the pin.
+            homeAddressPickerLauncher.launch(
+                MapPickerActivity.intentForHome(
+                    requireContext(),
+                    currentLat = currentHomeLat,
+                    currentLng = currentHomeLng
+                )
+            )
+        }
         if (activeGroupId.isNotEmpty()) {
             loadGroupAndToday(activeGroupId)
         } else {
@@ -187,7 +216,7 @@ class DashboardHomeFragment : Fragment() {
         fun applyGreeting(displayName: String, role: String) {
             if (_binding == null) return
             currentUserRole = role
-            binding.dashboardHomeHelloUser.text = getString(R.string.home_hello_user, displayName)
+            binding.dashboardHomeHelloUser.text = getString(R.string.home_hello_user, bidiSafe(displayName))
             binding.dashboardHomeHelloUser.visibility = View.VISIBLE
             // Leave applies only when this dashboard has a selected group (not whether user is "in a carpool" elsewhere).
             val hasSelectedGroup = activeGroupId.isNotBlank()
@@ -213,6 +242,57 @@ class DashboardHomeFragment : Fragment() {
                 ?: profile?.email?.takeIf { it.isNotBlank() }
                 ?: fallbackNameFromAuth()
             applyGreeting(name, profile?.role.orEmpty())
+            updateHomeAddressBanner(profile)
+        }
+    }
+
+    /**
+     * Home-address banner: always visible. Copy + button label switch based on whether the user
+     * has saved coords yet — "Set" CTA for new users, "Edit" CTA with the current address shown
+     * for users who already saved one.
+     */
+    private fun updateHomeAddressBanner(profile: dev.segev.carpoolkids.model.UserProfile?) {
+        if (_binding == null) return
+        val lat = profile?.homeLat
+        val lng = profile?.homeLng
+        hasHomeAddress = lat != null && lng != null
+        currentHomeLat = lat
+        currentHomeLng = lng
+        binding.dashboardHomeHomeAddressBanner.visibility = View.VISIBLE
+        if (hasHomeAddress && lat != null && lng != null) {
+            val label = profile?.homeAddressLabel?.takeIf { it.isNotBlank() }
+                ?: getString(R.string.profile_home_coords_format, lat, lng)
+            binding.dashboardHomeHomeAddressText.text =
+                getString(R.string.profile_home_set_label, bidiSafe(label))
+            binding.dashboardHomeHomeAddressAction.setText(R.string.profile_home_edit_action)
+        } else {
+            binding.dashboardHomeHomeAddressText.setText(R.string.profile_home_banner_text)
+            binding.dashboardHomeHomeAddressAction.setText(R.string.profile_home_banner_action)
+        }
+    }
+
+    private fun saveHomeAddress(lat: Double, lng: Double, label: String? = null) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+        if (uid.isBlank()) return
+        binding.dashboardHomeHomeAddressAction.isEnabled = false
+        UserRepository.updateHomeAddress(uid, lat, lng, label) { ok, err ->
+            if (_binding == null) return@updateHomeAddress
+            binding.dashboardHomeHomeAddressAction.isEnabled = true
+            if (ok) {
+                // Refresh from the latest profile so the banner switches to "Edit" mode with the
+                // saved label shown — no race between local state and the server's view.
+                UserRepository.getUser(uid) { profile, _ ->
+                    if (_binding == null) return@getUser
+                    updateHomeAddressBanner(profile)
+                }
+                Snackbar.make(binding.root, R.string.profile_home_saved, Snackbar.LENGTH_SHORT).show()
+            } else {
+                Snackbar.make(
+                    binding.root,
+                    err ?: getString(R.string.profile_home_save_error),
+                    Snackbar.LENGTH_LONG
+                ).show()
+            }
         }
     }
 

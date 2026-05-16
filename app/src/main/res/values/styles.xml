@@ -64,4 +64,13 @@
         <item name="android:textSize">@dimen/text_section_label_size</item>
         <item name="android:textColor">@color/dashboard_text_secondary</item>
     </style>
+
+    <!-- Drive-request picker dialog: Applied via AlertDialog.Builder(ctx, R.style.ThemeOverlay_CarpoolKids_PickerDialog)
+         so it's scoped to that single dialog without touching the app theme. -->
+    <style name="ThemeOverlay.CarpoolKids.PickerDialog" parent="ThemeOverlay.MaterialComponents.Dialog.Alert">
+        <item name="textAppearanceListItem">@style/TextAppearance.CarpoolKids.PickerItem</item>
+    </style>
+    <style name="TextAppearance.CarpoolKids.PickerItem" parent="TextAppearance.MaterialComponents.Subtitle1">
+        <item name="android:textSize">14sp</item>
+    </style>
 </resources>

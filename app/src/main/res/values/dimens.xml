@@ -11,6 +11,7 @@
     <dimen name="spacing_xl">20dp</dimen>
     <dimen name="spacing_section">24dp</dimen>
     <dimen name="spacing_section_lg">28dp</dimen>
+    <dimen name="spacing_xxl">32dp</dimen>
 
     <!-- Card -->
     <dimen name="card_corner_radius">12dp</dimen>
@@ -24,12 +25,13 @@
     <dimen name="text_card_day_size">14sp</dimen>
     <dimen name="text_card_time_size">16sp</dimen>
     <dimen name="text_badge_size">8sp</dimen>
+    <dimen name="text_caption_size">12sp</dimen>
 
     <!-- Button -->
     <dimen name="button_min_height">48dp</dimen>
     <dimen name="button_margin_between">12dp</dimen>
     <!-- Join request row: one size for all three buttons (autosize per-button made sizes uneven) -->
-    <dimen name="join_request_action_text_size">10sp</dimen>
+    <dimen name="join_request_action_text_size">9sp</dimen>
 
     <!-- Bottom nav -->
     <dimen name="bottom_nav_height">56dp</dimen>

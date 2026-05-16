@@ -10,13 +10,15 @@ import dev.segev.carpoolkids.R
 import dev.segev.carpoolkids.databinding.ItemGroupMemberBinding
 import dev.segev.carpoolkids.utilities.Constants
 
-/** One row for the Group Details members list: display name, email, role, and whether this is the current user (for "You" badge). */
+/** One row for the Group Details members list: display name, email, role, home-address line, and whether this is the current user (for "You" badge). */
 data class GroupMemberRow(
     val uid: String,
     val displayName: String,
     val email: String,
     val role: String,
-    val isCurrentUser: Boolean
+    val isCurrentUser: Boolean,
+    /** Pre-formatted home address text — already includes the "Home: …" prefix or a "Home not set" fallback. */
+    val homeAddressLine: String
 )
 
 class GroupMembersAdapter : ListAdapter<GroupMemberRow, GroupMembersAdapter.ViewHolder>(DiffCallback()) {
@@ -40,6 +42,7 @@ class GroupMembersAdapter : ListAdapter<GroupMemberRow, GroupMembersAdapter.View
             else
                 binding.root.context.getString(R.string.group_details_role_child)
             binding.itemMemberYouBadge.visibility = if (row.isCurrentUser) View.VISIBLE else View.GONE
+            binding.itemMemberAddress.text = row.homeAddressLine
         }
     }
 

@@ -35,6 +35,12 @@ data class CarpoolRoute(
     val failureReason: String? = null,
     val generatedAt: Long? = null,
     val generatedByUid: String? = null,
+    /**
+     * Phase 5 — uids of riders in [Practice.participantUids] who were skipped from this route
+     * because they had no `homeLat/homeLng`. The route screen renders their names so the driver
+     * can nudge them to set an address. Driver is never blocked by a missing address.
+     */
+    val missingAddressUids: List<String> = emptyList(),
     /** Optional Gemini summary; never required for routing correctness. */
     val aiSummary: String? = null,
     val aiSummaryGeneratedAt: Long? = null

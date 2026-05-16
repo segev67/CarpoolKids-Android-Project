@@ -9,10 +9,12 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Transaction
+import dev.segev.carpoolkids.model.CarpoolRoute
 import dev.segev.carpoolkids.model.DriveRequest
 import dev.segev.carpoolkids.model.Group
 import dev.segev.carpoolkids.model.JoinRequest
 import dev.segev.carpoolkids.model.Practice
+import dev.segev.carpoolkids.model.RouteStop
 import dev.segev.carpoolkids.model.UserProfile
 import java.lang.ref.WeakReference
 import java.util.Date
@@ -309,13 +311,19 @@ class FirestoreManager private constructor(context: Context) {
                             callback(false, e4)
                             return@step4
                         }
-                        db.collection(Constants.Firestore.COLLECTION_GROUPS)
-                            .document(groupId)
-                            .delete()
-                            .addOnSuccessListener { callback(true, null) }
-                            .addOnFailureListener { e ->
-                                callback(false, e.message ?: "Failed to delete group")
+                        deleteDocumentsWhereGroupId(Constants.Firestore.COLLECTION_CARPOOL_ROUTES, groupId) step5@{ ok5, e5 ->
+                            if (!ok5) {
+                                callback(false, e5)
+                                return@step5
                             }
+                            db.collection(Constants.Firestore.COLLECTION_GROUPS)
+                                .document(groupId)
+                                .delete()
+                                .addOnSuccessListener { callback(true, null) }
+                                .addOnFailureListener { e ->
+                                    callback(false, e.message ?: "Failed to delete group")
+                                }
+                        }
                     }
                 }
             }
@@ -501,7 +509,7 @@ class FirestoreManager private constructor(context: Context) {
     // ---------- Practices (Schedule tab) ----------
 
     fun createPractice(practice: Practice, callback: (Boolean, String?) -> Unit) {
-        val data = hashMapOf(
+        val data = hashMapOf<String, Any>(
             "id" to practice.id,
             "groupId" to practice.groupId,
             "date" to Timestamp(Date(practice.dateMillis)),
@@ -513,6 +521,8 @@ class FirestoreManager private constructor(context: Context) {
             "createdAt" to FieldValue.serverTimestamp()
         ).apply {
             practice.createdBy?.let { put("createdBy", it) }
+            practice.locationLat?.let { put("locationLat", it) }
+            practice.locationLng?.let { put("locationLng", it) }
         }
         db.collection(Constants.Firestore.COLLECTION_PRACTICES)
             .document(practice.id)
@@ -542,6 +552,30 @@ class FirestoreManager private constructor(context: Context) {
                 }
             }
             .addOnFailureListener { e -> callback(null, e.message ?: "Failed to load practice") }
+    }
+
+    /**
+     * Phase 7 — single-practice realtime listener. Used by the route screen so participants /
+     * driver / canceled changes from other users propagate within ~1 s. Caller must remove the
+     * returned registration in onDestroyView.
+     */
+    fun listenToPractice(
+        practiceId: String,
+        callback: (Practice?) -> Unit
+    ): ListenerRegistration {
+        return db.collection(Constants.Firestore.COLLECTION_PRACTICES)
+            .document(practiceId)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    callback(null)
+                    return@addSnapshotListener
+                }
+                if (snapshot == null || !snapshot.exists()) {
+                    callback(null)
+                    return@addSnapshotListener
+                }
+                callback(documentToPractice(snapshot))
+            }
     }
 
     /**
@@ -669,6 +703,171 @@ class FirestoreManager private constructor(context: Context) {
                 val list = snapshot?.documents?.mapNotNull { documentToPractice(it) }
                     ?.sortedWith(compareBy({ it.dateMillis }, { it.startTime })) ?: emptyList()
                 callback(list, null)
+            }
+    }
+
+    /**
+     * Phase 2 — Set or update a user's home coordinates. Used by the home-address map picker.
+     * Rules: users may write only their own document (existing rule).
+     */
+    fun updateHomeAddress(
+        uid: String,
+        lat: Double,
+        lng: Double,
+        label: String?,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        if (uid.isBlank()) {
+            callback(false, "Invalid user")
+            return
+        }
+        val updates = hashMapOf<String, Any>(
+            "homeLat" to lat,
+            "homeLng" to lng
+        )
+        label?.takeIf { it.isNotBlank() }?.let { updates["homeAddressLabel"] = it }
+        db.collection(Constants.Firestore.COLLECTION_USERS)
+            .document(uid)
+            .update(updates)
+            .addOnSuccessListener { callback(true, null) }
+            .addOnFailureListener { e ->
+                callback(false, e.message ?: "Failed to save home address")
+            }
+    }
+
+    /**
+     * Phase 3 — Add the calling user to a practice's [Practice.participantUids].
+     * Idempotent (arrayUnion). UI hides the button when the user is already a rider.
+     */
+    fun joinPractice(
+        practiceId: String,
+        uid: String,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        if (practiceId.isBlank() || uid.isBlank()) {
+            callback(false, "Invalid practice or user")
+            return
+        }
+        db.collection(Constants.Firestore.COLLECTION_PRACTICES)
+            .document(practiceId)
+            .update("participantUids", FieldValue.arrayUnion(uid))
+            .addOnSuccessListener { callback(true, null) }
+            .addOnFailureListener { e ->
+                callback(false, e.message ?: "Failed to join practice")
+            }
+    }
+
+    /**
+     * Phase 3 — Remove the calling user from a practice's [Practice.participantUids] and, in the same
+     * batch, mark any APPROVED [drive_requests] they had for this practice as CANCELED. Atomic so the
+     * UI never shows a child as still riding with an active drive request after they tap Leave.
+     *
+     * [groupId] is required by the drive_requests `read` rule — the rule references
+     * `resource.data.groupId`, so the query must include it as a filter or Firestore rejects the
+     * whole query with PERMISSION_DENIED before evaluating any individual doc.
+     */
+    fun leavePractice(
+        practiceId: String,
+        groupId: String,
+        uid: String,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        if (practiceId.isBlank() || groupId.isBlank() || uid.isBlank()) {
+            callback(false, "Invalid practice, group or user")
+            return
+        }
+        val practiceRef = db.collection(Constants.Firestore.COLLECTION_PRACTICES).document(practiceId)
+        db.collection(Constants.Firestore.COLLECTION_DRIVE_REQUESTS)
+            .whereEqualTo("groupId", groupId)
+            .whereEqualTo("practiceId", practiceId)
+            .whereEqualTo("requesterUid", uid)
+            .whereEqualTo("status", DriveRequest.STATUS_APPROVED)
+            .get()
+            .addOnSuccessListener { snap ->
+                val batch = db.batch()
+                batch.update(practiceRef, "participantUids", FieldValue.arrayRemove(uid))
+                for (doc in snap.documents) {
+                    batch.update(doc.reference, "status", DriveRequest.STATUS_CANCELED)
+                }
+                batch.commit()
+                    .addOnSuccessListener { callback(true, null) }
+                    .addOnFailureListener { e ->
+                        callback(false, e.message ?: "Failed to leave practice")
+                    }
+            }
+            .addOnFailureListener { e ->
+                callback(false, e.message ?: "Failed to query drive requests")
+            }
+    }
+
+    /**
+     * Phase 3 — leaveGroup cascade. Removes [uid] from `participantUids` on every FUTURE practice in
+     * the group (past practices keep history), then removes the uid from `memberIds`. If the cleanup
+     * query itself fails, we fall through to just removing from the group (best-effort).
+     */
+    fun leaveGroupAndCleanupParticipants(
+        groupId: String,
+        uid: String,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        if (groupId.isBlank() || uid.isBlank()) {
+            callback(false, "Invalid group or user")
+            return
+        }
+        val nowTimestamp = Timestamp(Date(System.currentTimeMillis()))
+        db.collection(Constants.Firestore.COLLECTION_PRACTICES)
+            .whereEqualTo("groupId", groupId)
+            .whereGreaterThan("date", nowTimestamp)
+            .get()
+            .addOnSuccessListener { snap ->
+                if (snap.isEmpty) {
+                    removeMemberFromGroup(groupId, uid, callback)
+                    return@addOnSuccessListener
+                }
+                val batch = db.batch()
+                for (doc in snap.documents) {
+                    batch.update(doc.reference, "participantUids", FieldValue.arrayRemove(uid))
+                }
+                batch.commit()
+                    .addOnSuccessListener { removeMemberFromGroup(groupId, uid, callback) }
+                    .addOnFailureListener {
+                        // Cleanup failed — still let the user leave the group. Orphans are tolerated.
+                        removeMemberFromGroup(groupId, uid, callback)
+                    }
+            }
+            .addOnFailureListener {
+                removeMemberFromGroup(groupId, uid, callback)
+            }
+    }
+
+    /**
+     * Phase 2 — Set or update a practice's geographic coordinates.
+     * When [addressLabel] is non-blank, it's also written into the practice's `location` text
+     * field in the same atomic update (used by the map picker reverse-geocode path).
+     * Rules: any group member may update; UI is gated to parents.
+     */
+    fun updateLocationCoords(
+        practiceId: String,
+        lat: Double,
+        lng: Double,
+        addressLabel: String? = null,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        if (practiceId.isBlank()) {
+            callback(false, "Invalid practice id")
+            return
+        }
+        val updates = hashMapOf<String, Any>(
+            "locationLat" to lat,
+            "locationLng" to lng
+        )
+        addressLabel?.takeIf { it.isNotBlank() }?.let { updates["location"] = it }
+        db.collection(Constants.Firestore.COLLECTION_PRACTICES)
+            .document(practiceId)
+            .update(updates)
+            .addOnSuccessListener { callback(true, null) }
+            .addOnFailureListener { e ->
+                callback(false, e.message ?: "Failed to save coordinates")
             }
     }
 
@@ -930,10 +1129,16 @@ class FirestoreManager private constructor(context: Context) {
             if (reqStatus != DriveRequest.STATUS_PENDING || slotTaken) {
                 throw RuntimeException("Slot already taken or request no longer pending")
             }
-            when (request.direction) {
-                DriveRequest.DIRECTION_TO -> transaction.update(practiceRef, "driverToUid", acceptedByUid)
-                DriveRequest.DIRECTION_FROM -> transaction.update(practiceRef, "driverFromUid", acceptedByUid)
-            }
+            // Phase 3: same transaction also arrayUnions the requester into participantUids so the route
+            // roster stays in sync with "this child is riding." Partial state is not acceptable.
+            val driverField = if (request.direction == DriveRequest.DIRECTION_TO) "driverToUid" else "driverFromUid"
+            transaction.update(
+                practiceRef,
+                mapOf(
+                    driverField to acceptedByUid,
+                    "participantUids" to FieldValue.arrayUnion(request.requesterUid)
+                )
+            )
             transaction.update(
                 requestRef,
                 "status", DriveRequest.STATUS_APPROVED,
@@ -1167,6 +1372,173 @@ class FirestoreManager private constructor(context: Context) {
                 val list = snapshot?.documents?.mapNotNull { documentToGroup(it) } ?: emptyList()
                 callback(list)
             }
+    }
+
+    // ---------- Carpool routes (Phase 5) ----------
+
+    /**
+     * Idempotent write: creates the carpool_routes doc, or overwrites it when the driver regenerates.
+     * The doc id is deterministic — `{practiceId}_{direction}` — so a regenerate replaces the prior
+     * route cleanly, which is exactly what we want.
+     */
+    fun createOrUpdateCarpoolRoute(route: CarpoolRoute, callback: (Boolean, String?) -> Unit) {
+        val data: HashMap<String, Any?> = hashMapOf(
+            "id" to route.id,
+            "groupId" to route.groupId,
+            "practiceId" to route.practiceId,
+            "direction" to route.direction,
+            "driverUid" to route.driverUid,
+            "driverHomeLat" to route.driverHomeLat,
+            "driverHomeLng" to route.driverHomeLng,
+            "trainingLat" to route.trainingLat,
+            "trainingLng" to route.trainingLng,
+            "trainingStartTime" to route.trainingStartTime,
+            "trainingEndTime" to route.trainingEndTime,
+            "practiceDateMillis" to route.practiceDateMillis,
+            "stops" to route.stops.map { stopToMap(it) },
+            "recommendedDepartureMillis" to route.recommendedDepartureMillis,
+            "totalDurationSec" to route.totalDurationSec,
+            "totalDistanceMeters" to route.totalDistanceMeters,
+            "polyline" to route.polyline,
+            "polylinePrecision" to route.polylinePrecision,
+            "status" to route.status,
+            "failureReason" to route.failureReason,
+            "generatedAt" to (route.generatedAt?.let { Timestamp(Date(it)) }
+                ?: FieldValue.serverTimestamp()),
+            "generatedByUid" to route.generatedByUid,
+            "missingAddressUids" to route.missingAddressUids,
+            "aiSummary" to route.aiSummary,
+            "aiSummaryGeneratedAt" to route.aiSummaryGeneratedAt?.let { Timestamp(Date(it)) }
+        )
+        db.collection(Constants.Firestore.COLLECTION_CARPOOL_ROUTES)
+            .document(route.id)
+            .set(data)
+            .addOnSuccessListener { callback(true, null) }
+            .addOnFailureListener { e -> callback(false, e.message ?: "Failed to save route") }
+    }
+
+    fun getCarpoolRoute(routeId: String, callback: (CarpoolRoute?, String?) -> Unit) {
+        if (routeId.isBlank()) {
+            callback(null, "Invalid route id")
+            return
+        }
+        db.collection(Constants.Firestore.COLLECTION_CARPOOL_ROUTES)
+            .document(routeId)
+            .get()
+            .addOnSuccessListener { doc ->
+                if (doc == null || !doc.exists()) {
+                    callback(null, null)
+                } else {
+                    callback(documentToCarpoolRoute(doc), null)
+                }
+            }
+            .addOnFailureListener { e -> callback(null, e.message ?: "Failed to load route") }
+    }
+
+    fun listenToCarpoolRoute(routeId: String, callback: (CarpoolRoute?) -> Unit): ListenerRegistration {
+        return db.collection(Constants.Firestore.COLLECTION_CARPOOL_ROUTES)
+            .document(routeId)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    callback(null)
+                    return@addSnapshotListener
+                }
+                if (snapshot == null || !snapshot.exists()) {
+                    callback(null)
+                    return@addSnapshotListener
+                }
+                callback(documentToCarpoolRoute(snapshot))
+            }
+    }
+
+    private fun stopToMap(stop: RouteStop): Map<String, Any?> = mapOf(
+        "sequence" to stop.sequence,
+        "passengerUid" to stop.passengerUid,
+        "passengerName" to stop.passengerName,
+        "lat" to stop.lat,
+        "lng" to stop.lng,
+        "etaMillis" to stop.etaMillis,
+        "legDurationSec" to stop.legDurationSec,
+        "legDistanceMeters" to stop.legDistanceMeters
+    )
+
+    private fun documentToCarpoolRoute(doc: com.google.firebase.firestore.DocumentSnapshot): CarpoolRoute? {
+        if (!doc.exists()) return null
+        val id = doc.getString("id") ?: doc.id
+        val groupId = doc.getString("groupId") ?: return null
+        val practiceId = doc.getString("practiceId") ?: return null
+        val direction = doc.getString("direction") ?: return null
+        val driverUid = doc.getString("driverUid") ?: return null
+        val driverHomeLat = doc.getDouble("driverHomeLat") ?: return null
+        val driverHomeLng = doc.getDouble("driverHomeLng") ?: return null
+        val trainingLat = doc.getDouble("trainingLat") ?: return null
+        val trainingLng = doc.getDouble("trainingLng") ?: return null
+        val trainingStartTime = doc.getString("trainingStartTime") ?: ""
+        val trainingEndTime = doc.getString("trainingEndTime") ?: ""
+        val practiceDateMillis = doc.getLong("practiceDateMillis") ?: 0L
+        val stops = (doc.get("stops") as? List<*>)?.mapNotNull { mapToStop(it) } ?: emptyList()
+        val recommendedDepartureMillis = doc.getLong("recommendedDepartureMillis") ?: 0L
+        val totalDurationSec = (doc.getLong("totalDurationSec") ?: 0L).toInt()
+        val totalDistanceMeters = (doc.getLong("totalDistanceMeters") ?: 0L).toInt()
+        val polyline = doc.getString("polyline") ?: ""
+        val polylinePrecision = (doc.getLong("polylinePrecision") ?: 5L).toInt()
+        val status = doc.getString("status") ?: return null
+        val failureReason = doc.getString("failureReason")?.takeIf { it.isNotEmpty() }
+        val generatedAt = doc.getTimestamp("generatedAt")?.toDate()?.time
+        val generatedByUid = doc.getString("generatedByUid")?.takeIf { it.isNotEmpty() }
+        val missingAddressUids = (doc.get("missingAddressUids") as? List<*>)
+            ?.mapNotNull { it as? String } ?: emptyList()
+        val aiSummary = doc.getString("aiSummary")?.takeIf { it.isNotEmpty() }
+        val aiSummaryGeneratedAt = doc.getTimestamp("aiSummaryGeneratedAt")?.toDate()?.time
+        return CarpoolRoute(
+            id = id,
+            groupId = groupId,
+            practiceId = practiceId,
+            direction = direction,
+            driverUid = driverUid,
+            driverHomeLat = driverHomeLat,
+            driverHomeLng = driverHomeLng,
+            trainingLat = trainingLat,
+            trainingLng = trainingLng,
+            trainingStartTime = trainingStartTime,
+            trainingEndTime = trainingEndTime,
+            practiceDateMillis = practiceDateMillis,
+            stops = stops,
+            recommendedDepartureMillis = recommendedDepartureMillis,
+            totalDurationSec = totalDurationSec,
+            totalDistanceMeters = totalDistanceMeters,
+            polyline = polyline,
+            polylinePrecision = polylinePrecision,
+            status = status,
+            failureReason = failureReason,
+            generatedAt = generatedAt,
+            generatedByUid = generatedByUid,
+            missingAddressUids = missingAddressUids,
+            aiSummary = aiSummary,
+            aiSummaryGeneratedAt = aiSummaryGeneratedAt
+        )
+    }
+
+    private fun mapToStop(raw: Any?): RouteStop? {
+        val map = raw as? Map<*, *> ?: return null
+        val sequence = (map["sequence"] as? Number)?.toInt() ?: return null
+        val passengerUid = map["passengerUid"] as? String ?: return null
+        val passengerName = map["passengerName"] as? String ?: ""
+        val lat = (map["lat"] as? Number)?.toDouble() ?: return null
+        val lng = (map["lng"] as? Number)?.toDouble() ?: return null
+        val etaMillis = (map["etaMillis"] as? Number)?.toLong() ?: 0L
+        val legDurationSec = (map["legDurationSec"] as? Number)?.toInt() ?: 0
+        val legDistanceMeters = (map["legDistanceMeters"] as? Number)?.toInt() ?: 0
+        return RouteStop(
+            sequence = sequence,
+            passengerUid = passengerUid,
+            passengerName = passengerName,
+            lat = lat,
+            lng = lng,
+            etaMillis = etaMillis,
+            legDurationSec = legDurationSec,
+            legDistanceMeters = legDistanceMeters
+        )
     }
 
     companion object {

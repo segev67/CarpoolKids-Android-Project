@@ -128,6 +128,7 @@
             android:textSize="@dimen/text_section_label_size"
             android:textColor="@color/dashboard_text_secondary" />
 
+        <!-- Read-only: the location string is set by the map picker (reverse-geocoded) — no manual typing. -->
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/practice_detail_location"
             android:layout_width="match_parent"
@@ -135,14 +136,28 @@
             android:minHeight="@dimen/button_min_height"
             android:padding="@dimen/card_padding"
             android:background="@color/dashboard_card_background"
-            android:inputType="text"
+            android:cursorVisible="false"
+            android:focusable="false"
+            android:focusableInTouchMode="false"
+            android:inputType="none"
+            android:longClickable="false"
             android:textSize="@dimen/text_card_time_size"
             android:textColor="@color/dashboard_text_primary"
             android:textColorHint="@color/dashboard_text_secondary"
+            android:textDirection="ltr"
             android:maxLines="2"
             android:ellipsize="end"
-            android:hint="@string/practice_detail_hint_location"
-            android:imeOptions="actionNext" />
+            android:hint="@string/practice_detail_hint_location" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/practice_detail_set_location_on_map"
+            style="@style/Widget.CarpoolKids.Button.Outlined"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_sm"
+            android:text="@string/practice_detail_set_location_on_map"
+            android:visibility="gone"
+            tools:visibility="visible" />
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/practice_detail_transport_card"
@@ -168,6 +183,53 @@
                     android:textColor="@color/dashboard_text_primary"
                     android:textStyle="bold" />
 
+                <!-- Phase 3: child rider self-management. Hidden for parents and for canceled practices. -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/practice_detail_join_button"
+                    style="@style/Widget.CarpoolKids.Button"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_md"
+                    android:text="@string/practice_join_button"
+                    android:textSize="@dimen/text_badge_size"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/practice_detail_join_pending_hint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_sm"
+                    android:text="@string/practice_join_already_pending"
+                    android:textColor="@color/status_pending_orange"
+                    android:textSize="@dimen/text_caption_size"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
+                <!-- Riders list: visible to anyone when at least one child is in the carpool. -->
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/practice_detail_riders_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_md"
+                    android:textColor="@color/dashboard_text_secondary"
+                    android:textSize="@dimen/text_caption_size"
+                    android:visibility="gone"
+                    tools:text="Riders (3)"
+                    tools:visibility="visible" />
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/practice_detail_riders_value"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_xs"
+                    android:textColor="@color/dashboard_text_primary"
+                    android:textDirection="ltr"
+                    android:textSize="@dimen/text_card_day_size"
+                    android:visibility="gone"
+                    tools:text="Daniel, Maya, Yossi"
+                    tools:visibility="visible" />
+
                 <!-- TO practice section -->
                 <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/practice_detail_to_label"
@@ -175,7 +237,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_md"
                     android:text="@string/practice_detail_to_practice"
-                    android:textSize="12sp"
+                    android:textSize="@dimen/text_caption_size"
                     android:textColor="@color/dashboard_text_secondary" />
 
                 <com.google.android.material.textview.MaterialTextView
@@ -185,6 +247,7 @@
                     android:layout_marginTop="@dimen/spacing_xs"
                     android:textSize="@dimen/text_card_day_size"
                     android:textColor="@color/dashboard_text_primary"
+                    android:textDirection="ltr"
                     android:maxLines="1"
                     android:ellipsize="end"
                     tools:text="Rachel Israeli" />
@@ -238,7 +301,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_md"
                     android:text="@string/practice_detail_from_practice"
-                    android:textSize="12sp"
+                    android:textSize="@dimen/text_caption_size"
                     android:textColor="@color/dashboard_text_secondary" />
 
                 <com.google.android.material.textview.MaterialTextView
@@ -248,6 +311,7 @@
                     android:layout_marginTop="@dimen/spacing_xs"
                     android:textSize="@dimen/text_card_day_size"
                     android:textColor="@color/dashboard_text_primary"
+                    android:textDirection="ltr"
                     android:maxLines="1"
                     android:ellipsize="end"
                     tools:text="Rachel Israeli" />
@@ -293,6 +357,31 @@
                     android:textSize="@dimen/text_badge_size"
                     android:text="@string/drive_request_cancel_drive"
                     android:visibility="gone" />
+
+                <!-- Phase 6 — open the shared route screen. Visible to every group member when a
+                     driver is assigned for that direction; route generation itself lives in the
+                     route screen so non-drivers can still open it and see "not generated yet". -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/practice_detail_view_pickup_route"
+                    style="@style/Widget.CarpoolKids.Button.Outlined"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_md"
+                    android:textSize="@dimen/text_badge_size"
+                    android:text="@string/route_view_pickup"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/practice_detail_view_dropoff_route"
+                    style="@style/Widget.CarpoolKids.Button.Outlined"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/spacing_xs"
+                    android:textSize="@dimen/text_badge_size"
+                    android:text="@string/route_view_dropoff"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

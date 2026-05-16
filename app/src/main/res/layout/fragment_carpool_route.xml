@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/dashboard_background">
+
+    <!-- Top bar: back arrow + dynamic title (Pickup / Dropoff route) -->
+    <LinearLayout
+        android:id="@+id/route_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/dashboard_card_background"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/spacing_sm"
+        android:paddingEnd="@dimen/spacing_lg"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageButton
+            android:id="@+id/route_back_button"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/route_back_content_description"
+            android:src="@android:drawable/ic_menu_revert"
+            app:tint="@color/dashboard_text_primary" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/route_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/spacing_sm"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/dashboard_text_primary"
+            android:textSize="@dimen/text_title_size"
+            android:textStyle="bold"
+            tools:text="Pickup route" />
+    </LinearLayout>
+
+    <!-- Phase 7 — state banner under the toolbar. Surfaces stale / driver-canceled / practice-canceled
+         copy live as the practice listener fires. Hidden by default; pushes the map down when visible. -->
+    <LinearLayout
+        android:id="@+id/route_state_banner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/status_pending_orange"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="@dimen/dashboard_screen_padding"
+        android:paddingVertical="@dimen/spacing_sm"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/route_toolbar"
+        tools:visibility="visible">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/route_state_banner_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/dashboard_text_primary"
+            android:textSize="@dimen/text_section_label_size"
+            tools:text="Riders changed since this route was generated — tap Regenerate to refresh." />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/route_state_banner_action"
+            style="@style/Widget.CarpoolKids.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/spacing_sm"
+            android:minWidth="0dp"
+            android:paddingHorizontal="@dimen/spacing_md"
+            android:text="@string/route_regenerate"
+            android:textSize="@dimen/text_badge_size"
+            android:visibility="gone"
+            tools:visibility="visible" />
+    </LinearLayout>
+
+    <!-- Map fills the upper half of the screen below the toolbar (or below the banner if it's showing). -->
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/route_map"
+        android:name="com.google.android.gms.maps.SupportMapFragment"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@id/route_panel"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/route_state_banner" />
+
+    <!-- Summary card overlaid on the map's top edge. -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/route_summary_card"
+        style="@style/Widget.CarpoolKids.CardView.Dashboard"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/spacing_lg"
+        android:layout_marginTop="@dimen/spacing_lg"
+        android:layout_marginEnd="@dimen/spacing_lg"
+        android:visibility="gone"
+        app:cardCornerRadius="@dimen/card_corner_radius"
+        app:cardElevation="@dimen/card_elevation"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/route_map"
+        tools:visibility="visible">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="@dimen/card_padding">
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/route_summary_anchor_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/dashboard_text_secondary"
+                android:textSize="@dimen/text_section_label_size"
+                tools:text="Leave by" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/route_summary_anchor_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/dashboard_text_primary"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                tools:text="16:35" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/route_summary_totals"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_xs"
+                android:textColor="@color/dashboard_text_primary"
+                android:textSize="@dimen/text_card_day_size"
+                tools:text="4.2 km · 12 min" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/route_summary_missing"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_xs"
+                android:textColor="@color/status_pending_orange"
+                android:textSize="@dimen/text_caption_size"
+                android:visibility="gone"
+                tools:text="Some riders have no address"
+                tools:visibility="visible" />
+
+            <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/route_summary_generated_ago"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_xs"
+                android:textColor="@color/dashboard_text_secondary"
+                android:textSize="@dimen/text_caption_size"
+                android:visibility="gone"
+                tools:text="Generated 2 minutes ago"
+                tools:visibility="visible" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Bottom panel: stops list + action buttons. -->
+    <LinearLayout
+        android:id="@+id/route_panel"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="@color/dashboard_card_background"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/dashboard_screen_padding"
+        android:paddingTop="@dimen/spacing_md"
+        android:paddingBottom="@dimen/spacing_md"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintHeight_percent="0.45"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/route_stops_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/route_stops_header"
+            android:textColor="@color/dashboard_text_primary"
+            android:textSize="@dimen/text_title_size"
+            android:textStyle="bold" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/route_stops_list"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="@dimen/spacing_sm"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:paddingBottom="@dimen/spacing_sm" />
+
+        <LinearLayout
+            android:id="@+id/route_actions_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/route_regenerate"
+                style="@style/Widget.CarpoolKids.Button.Outlined"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/route_regenerate"
+                android:textSize="@dimen/text_badge_size" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Empty / error / not-generated overlay. Sits over the panel area; hidden when stops list is showing. -->
+    <LinearLayout
+        android:id="@+id/route_state_overlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@color/dashboard_card_background"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingHorizontal="@dimen/dashboard_screen_padding"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/route_panel"
+        app:layout_constraintEnd_toEndOf="@id/route_panel"
+        app:layout_constraintStart_toStartOf="@id/route_panel"
+        app:layout_constraintTop_toTopOf="@id/route_panel"
+        tools:visibility="visible">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/route_state_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textColor="@color/dashboard_text_primary"
+            android:textSize="@dimen/text_card_time_size"
+            tools:text="No route yet. Generate one to share with the group." />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/route_state_action"
+            style="@style/Widget.CarpoolKids.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_md"
+            android:text="@string/route_generate_now"
+            android:visibility="gone"
+            tools:visibility="visible" />
+    </LinearLayout>
+
+    <!-- Indeterminate progress shown during generation. -->
+    <ProgressBar
+        android:id="@+id/route_progress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:indeterminate="true"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:visibility="visible" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

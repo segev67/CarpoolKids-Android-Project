@@ -36,6 +36,10 @@ object PracticeRepository {
         FirestoreManager.getInstance().getPracticeById(practiceId, callback)
     }
 
+    /** Phase 7 — single-practice realtime listener used by the route screen for stale detection. */
+    fun listenToPractice(practiceId: String, callback: (Practice?) -> Unit): ListenerRegistration =
+        FirestoreManager.getInstance().listenToPractice(practiceId, callback)
+
     fun getPracticesByIds(ids: List<String>, callback: (Map<String, Practice>) -> Unit) {
         FirestoreManager.getInstance().getPracticesByIds(ids, callback)
     }
@@ -56,6 +60,8 @@ object PracticeRepository {
         endTime: String,
         location: String,
         createdBy: String?,
+        locationLat: Double? = null,
+        locationLng: Double? = null,
         callback: (Practice?, String?) -> Unit
     ) {
         val id = UUID.randomUUID().toString()
@@ -68,11 +74,27 @@ object PracticeRepository {
             location = location.trim(),
             driverToUid = null,
             driverFromUid = null,
-            createdBy = createdBy
+            createdBy = createdBy,
+            locationLat = locationLat,
+            locationLng = locationLng
         )
         FirestoreManager.getInstance().createPractice(practice) { success, error ->
             if (success) callback(practice, null) else callback(null, error)
         }
+    }
+
+    /**
+     * Phase 2 — set or update the practice's lat/lng (set via the map picker).
+     * When [addressLabel] is non-blank, the practice's `location` text field is also updated atomically.
+     */
+    fun updateLocationCoords(
+        practiceId: String,
+        lat: Double,
+        lng: Double,
+        addressLabel: String? = null,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        FirestoreManager.getInstance().updateLocationCoords(practiceId, lat, lng, addressLabel, callback)
     }
 
     fun updatePractice(
@@ -106,5 +128,24 @@ object PracticeRepository {
         callback: (Boolean, String?) -> Unit
     ) {
         FirestoreManager.getInstance().cancelPractice(practiceId, canceledByUid, cancelReason, callback)
+    }
+
+    /** Phase 3 — child adds themselves to the practice carpool roster (arrayUnion). */
+    fun joinPractice(
+        practiceId: String,
+        uid: String,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        FirestoreManager.getInstance().joinPractice(practiceId, uid, callback)
+    }
+
+    /** Phase 3 — child removes themselves; cancels any APPROVED drive_request atomically. */
+    fun leavePractice(
+        practiceId: String,
+        groupId: String,
+        uid: String,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        FirestoreManager.getInstance().leavePractice(practiceId, groupId, uid, callback)
     }
 }

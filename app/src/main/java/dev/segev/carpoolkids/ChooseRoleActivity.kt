@@ -55,6 +55,22 @@ class ChooseRoleActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * After role save, route new users through [SetHomeAddressActivity] (skippable). Regardless of
+     * whether the user set or skipped their home address, we then continue with the normal
+     * group-count navigation by calling [navigateAfterLogin].
+     */
+    private val setHomeLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: run {
+            startActivity(Intent(this, LoginActivity::class.java))
+            finish()
+            return@registerForActivityResult
+        }
+        navigateAfterLogin(uid, pendingRoleAfterChoose)
+    }
+
     private val teamsListLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -101,7 +117,10 @@ class ChooseRoleActivity : AppCompatActivity() {
             showProgress(false)
             setRoleButtonsEnabled(true)
             if (success) {
-                navigateAfterLogin(user.uid, role)
+                pendingRoleAfterChoose = role
+                // New user onboarding: collect home address (optional) before navigating to
+                // the group-flow destination. setHomeLauncher continues to navigateAfterLogin.
+                setHomeLauncher.launch(Intent(this, SetHomeAddressActivity::class.java))
             } else {
                 showErrorUi(errorMessage ?: getString(R.string.choose_role_save_error))
             }

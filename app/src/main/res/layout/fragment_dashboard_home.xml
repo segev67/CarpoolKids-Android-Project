@@ -40,6 +40,64 @@
             tools:text="Hello Jane"
             tools:visibility="visible" />
 
+        <!-- Home address banner (Phase 2): visible when the user has no home coordinates yet. -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/dashboard_home_home_address_banner"
+            style="@style/Widget.CarpoolKids.CardView.Dashboard"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_md"
+            android:visibility="gone"
+            app:cardCornerRadius="@dimen/card_corner_radius"
+            app:cardElevation="@dimen/card_elevation"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/dashboard_home_hello_user"
+            tools:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/card_padding">
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/dashboard_home_home_address_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="@dimen/spacing_xs"
+                    android:text="@string/profile_home_section_title"
+                    android:textColor="@color/dashboard_text_secondary"
+                    android:textSize="@dimen/text_section_label_size"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/dashboard_home_home_address_text"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="@dimen/spacing_sm"
+                        android:text="@string/profile_home_banner_text"
+                        android:textColor="@color/dashboard_text_primary"
+                        android:textSize="@dimen/text_section_label_size" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/dashboard_home_home_address_action"
+                        style="@style/Widget.CarpoolKids.Button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/profile_home_banner_action"
+                        android:textSize="@dimen/text_badge_size" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- Today's Training section -->
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/dashboard_home_today_label"
@@ -49,7 +107,8 @@
             android:layout_marginTop="@dimen/spacing_md"
             android:text="@string/home_todays_training"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/dashboard_home_hello_user" />
+            app:layout_constraintTop_toBottomOf="@id/dashboard_home_home_address_banner"
+            app:layout_goneMarginTop="@dimen/spacing_md" />
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/dashboard_home_today_card"

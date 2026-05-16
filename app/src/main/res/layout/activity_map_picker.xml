@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/dashboard_background"
+    android:orientation="vertical">
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/map_picker_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="@dimen/dashboard_screen_padding"
+        android:paddingTop="@dimen/dashboard_screen_padding"
+        android:paddingEnd="@dimen/dashboard_screen_padding"
+        android:paddingBottom="@dimen/spacing_xs"
+        android:text="@string/map_picker_title"
+        android:textColor="@color/dashboard_text_primary"
+        android:textSize="@dimen/text_title_size"
+        android:textStyle="bold"
+        tools:text="Set your home" />
+
+    <com.google.android.material.textview.MaterialTextView
+        android:id="@+id/map_picker_hint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="@dimen/dashboard_screen_padding"
+        android:paddingEnd="@dimen/dashboard_screen_padding"
+        android:paddingBottom="@dimen/spacing_sm"
+        android:text="@string/map_picker_hint"
+        android:textColor="@color/dashboard_text_secondary"
+        android:textSize="@dimen/text_section_label_size" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/dashboard_screen_padding"
+        android:paddingEnd="@dimen/dashboard_screen_padding"
+        android:paddingBottom="@dimen/spacing_sm">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/map_picker_search_query"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="@dimen/spacing_sm"
+            android:background="@color/dashboard_card_background"
+            android:hint="@string/map_picker_search_hint"
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:maxLines="1"
+            android:minHeight="@dimen/button_min_height"
+            android:padding="@dimen/card_padding"
+            android:textColor="@color/dashboard_text_primary"
+            android:textColorHint="@color/dashboard_text_secondary"
+            android:textSize="@dimen/text_card_time_size" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/map_picker_search_button"
+            style="@style/Widget.CarpoolKids.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/map_picker_search_button"
+            android:textSize="@dimen/text_badge_size" />
+    </LinearLayout>
+
+    <fragment
+        android:id="@+id/map_picker_map"
+        android:name="com.google.android.gms.maps.SupportMapFragment"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="@dimen/dashboard_screen_padding">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/map_picker_cancel"
+            style="@style/Widget.CarpoolKids.Button.Outlined"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="@dimen/spacing_sm"
+            android:layout_weight="1"
+            android:text="@android:string/cancel" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/map_picker_confirm"
+            style="@style/Widget.CarpoolKids.Button"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/map_picker_confirm" />
+    </LinearLayout>
+</LinearLayout>

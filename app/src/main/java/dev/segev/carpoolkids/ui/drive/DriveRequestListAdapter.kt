@@ -10,6 +10,7 @@ import dev.segev.carpoolkids.R
 import dev.segev.carpoolkids.databinding.ItemDriveRequestBinding
 import dev.segev.carpoolkids.model.DriveRequest
 import dev.segev.carpoolkids.model.Practice
+import dev.segev.carpoolkids.utilities.bidiSafe
 import java.util.Calendar
 
 class DriveRequestListAdapter(
@@ -75,7 +76,7 @@ class DriveRequestListAdapter(
                 ?: ctx.getString(R.string.join_request_requester_unknown)
             binding.itemDriveRequestRequester.text = ctx.getString(
                 R.string.drive_request_requested_by,
-                requesterLabel
+                bidiSafe(requesterLabel)
             )
 
             val dateStr = formatPracticeDateLong(request.practiceDateMillis)
@@ -92,7 +93,8 @@ class DriveRequestListAdapter(
 
             val practice = practiceMap[request.practiceId]
             binding.itemDriveRequestTime.text = practice?.startTime ?: "—"
-            binding.itemDriveRequestLocation.text = practice?.location?.takeIf { it.isNotBlank() } ?: "—"
+            binding.itemDriveRequestLocation.text =
+                practice?.location?.takeIf { it.isNotBlank() }?.let { bidiSafe(it) } ?: "—"
 
             binding.itemDriveRequestStatus.text = when (request.status) {
                 DriveRequest.STATUS_PENDING -> ctx.getString(R.string.status_pending)
@@ -125,7 +127,7 @@ class DriveRequestListAdapter(
                     val name = requesterNames[request.acceptedByUid]
                         ?: ctx.getString(R.string.join_request_requester_unknown)
                     binding.itemDriveRequestResolvedBy.text = ctx.getString(
-                        R.string.drive_request_approved_by, name
+                        R.string.drive_request_approved_by, bidiSafe(name)
                     )
                     binding.itemDriveRequestResolvedBy.visibility = View.VISIBLE
                 }
@@ -133,7 +135,7 @@ class DriveRequestListAdapter(
                     val name = requesterNames[request.declinedByUid]
                         ?: ctx.getString(R.string.join_request_requester_unknown)
                     binding.itemDriveRequestResolvedBy.text = ctx.getString(
-                        R.string.drive_request_declined_by, name
+                        R.string.drive_request_declined_by, bidiSafe(name)
                     )
                     binding.itemDriveRequestResolvedBy.visibility = View.VISIBLE
                 }

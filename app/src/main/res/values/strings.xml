@@ -212,4 +212,102 @@
     <string name="join_requests_empty">No join requests.</string>
     <string name="blocked_users_empty">No blocked users.</string>
     <string name="join_request_requester_unknown">User</string>
+
+    <!-- Map picker (Phase 2 — route feature) -->
+    <string name="map_picker_title">Pick a location</string>
+    <string name="map_picker_title_home">Set your home</string>
+    <string name="map_picker_title_practice">Set practice location</string>
+    <string name="map_picker_hint">Long-press anywhere on the map to drop a pin. Long-press again to move it.</string>
+    <string name="map_picker_confirm">Confirm</string>
+    <string name="map_picker_select_first">Long-press the map to select a point first.</string>
+    <string name="map_picker_search_hint">Search address or place</string>
+    <string name="map_picker_search_button">Search</string>
+    <string name="map_picker_search_no_results">No locations found. Try a different search.</string>
+    <string name="map_picker_search_failed">Search failed. Check your connection.</string>
+    <string name="map_picker_search_unavailable">Search isn\'t available on this device. Long-press the map to drop a pin.</string>
+
+    <!-- Home address (Phase 2 — route feature) -->
+    <string name="profile_home_section_title">My Address</string>
+    <string name="profile_home_banner_text">Set your home address to enable shared carpool routes.</string>
+    <string name="profile_home_banner_action">Set home</string>
+    <string name="profile_home_saved">Home address saved.</string>
+    <string name="profile_home_save_error">Could not save home address. Try again.</string>
+    <string name="profile_home_set_label">Home: %1$s</string>
+    <string name="profile_home_edit_action">Edit</string>
+    <string name="profile_home_coords_format">%1$.4f, %2$.4f</string>
+    <string name="group_details_member_home_unset">Home not set</string>
+
+    <!-- Set home address onboarding screen (after Choose Role) -->
+    <string name="set_home_address_title">Set your home address</string>
+    <string name="set_home_address_explanation">We use your home address to plan shared carpool routes. You can set it now or skip and add it later from the Home tab.</string>
+    <string name="set_home_address_set_button">Set on map</string>
+    <string name="set_home_address_skip_button">Skip for now</string>
+
+    <!-- Join practice (Phase 3 — route feature) -->
+    <string name="practice_join_button">+ Join this practice</string>
+    <string name="practice_leave_button">✓ You\'re riding · tap to leave</string>
+    <string name="practice_riders_label">Riders (%1$d)</string>
+    <string name="practice_no_riders">No riders yet</string>
+    <string name="practice_join_already_pending">Waiting for a parent to approve your drive request</string>
+    <string name="practice_join_failed">Could not join practice. Try again.</string>
+    <string name="practice_leave_failed">Could not leave practice. Try again.</string>
+    <string name="practice_join_set_home_tip">Tip: set your home address so your driver can pick you up.</string>
+    <string name="practice_join_set_home_action">Set</string>
+
+    <!-- Practice location coords (Phase 2 — route feature) -->
+    <string name="add_practice_pick_on_map">Pick on map</string>
+    <string name="add_practice_pick_on_map_set">Pin set ✓</string>
+    <string name="practice_detail_set_location_on_map">Set location on map</string>
+    <string name="practice_detail_change_location_on_map">Change location on map</string>
+    <string name="practice_detail_location_coords_saved">Location coordinates saved.</string>
+    <string name="practice_detail_location_coords_save_error">Could not save coordinates. Try again.</string>
+
+    <!-- Generate carpool route (Phase 5; superseded by route screen in Phase 6 — kept for the in-screen regenerate flow) -->
+    <string name="route_generating">Generating route…</string>
+    <string name="route_generated_empty_toast">Route saved — no riders to route yet.</string>
+    <string name="route_generation_failed">Could not generate route: %1$s</string>
+
+    <!-- Practice detail entry points to the route screen (Phase 6) -->
+    <string name="route_view_pickup">View pickup route</string>
+    <string name="route_view_dropoff">View dropoff route</string>
+
+    <!-- Carpool route screen (Phase 6) -->
+    <string name="route_screen_title_pickup">Pickup route</string>
+    <string name="route_screen_title_dropoff">Dropoff route</string>
+    <string name="route_back_content_description">Back</string>
+    <string name="route_regenerate">Regenerate</string>
+    <string name="route_generate_now">Generate route</string>
+    <string name="route_leave_by">Leave by</string>
+    <string name="route_arrive_at">Arrive at</string>
+    <string name="route_depart">Depart</string>
+    <string name="route_pick_up_at">Pick up · %1$s</string>
+    <string name="route_drop_at">Drop off · %1$s</string>
+    <string name="route_total_summary">%1$s · %2$s</string>
+    <string name="route_distance_from_previous">%1$s from previous</string>
+    <string name="route_distance_km">%1$.1f km</string>
+    <string name="route_duration_min">%1$d min</string>
+    <string name="route_stops_header">Stops</string>
+    <string name="route_you_badge">You</string>
+    <string name="route_not_generated_driver">No route yet. Generate one to share with the group.</string>
+    <string name="route_not_generated_member">The driver hasn\'t generated the route yet.</string>
+    <string name="route_empty_roster">No riders are signed up for this practice yet.</string>
+    <string name="route_failed_state">Route generation failed: %1$s</string>
+    <string name="route_missing_addresses">Some riders have no address: %1$s</string>
+    <string name="route_no_practice">Could not load practice details.</string>
+
+    <!-- Phase 7 — edge states + stale detection -->
+    <string name="route_state_practice_canceled">Practice canceled. The carpool route is no longer needed.</string>
+    <string name="route_state_no_driver">No driver has claimed this direction yet.</string>
+    <string name="route_state_driver_canceled">The driver canceled their slot. Another driver needs to claim it before a route can be generated.</string>
+    <string name="route_state_no_riders">No riders are signed up for this practice yet.</string>
+    <string name="route_state_failed_with_retry">Route generation failed: %1$s</string>
+    <string name="route_state_stale_driver">Riders changed since this route was generated — tap Regenerate to refresh.</string>
+    <string name="route_state_stale_member">Riders changed since this route was generated — ask the driver to regenerate.</string>
+    <string name="route_state_stale_location_driver">Practice location changed — tap Regenerate to refresh.</string>
+    <string name="route_state_stale_location_member">Practice location changed — ask the driver to regenerate.</string>
+    <string name="route_retry">Retry</string>
+
+    <!-- Phase 8 — polish -->
+    <string name="route_generated_ago">Generated %1$s</string>
+    <string name="route_generated_just_now">Generated just now</string>
 </resources>

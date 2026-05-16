@@ -4,6 +4,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -148,10 +150,33 @@ class DriversRequestsFragment : Fragment() {
                 options.add(p to DriveRequest.DIRECTION_TO)
                 options.add(p to DriveRequest.DIRECTION_FROM)
             }
-            val labels = options.map { (p, dir) -> "${formatPracticeDateShort(p.dateMillis)} – $dir" }
+            val labels = options.map { (p, dir) ->
+                val start = p.startTime.takeIf { it.isNotBlank() }
+                val end = p.endTime.takeIf { it.isNotBlank() }
+                val timeRange = when {
+                    start != null && end != null -> "$start-$end"
+                    start != null -> start
+                    else -> "—"
+                }
+                "${formatPracticeDateShort(p.dateMillis)} · $timeRange – $dir"
+            }
+            // AppCompat's AlertDialog ignores `textAppearanceListItem` when supplied via theme
+            // overlay, so a custom ArrayAdapter applies the style per-row instead. This keeps the
+            // size change scoped to this one picker without touching the app theme.
+            val adapter = object : ArrayAdapter<String>(
+                requireContext(),
+                android.R.layout.simple_list_item_1,
+                labels
+            ) {
+                override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                    val view = super.getView(position, convertView, parent) as TextView
+                    view.setTextAppearance(R.style.TextAppearance_CarpoolKids_PickerItem)
+                    return view
+                }
+            }
             AlertDialog.Builder(requireContext())
                 .setTitle(title)
-                .setItems(labels.toTypedArray()) { _, which ->
+                .setAdapter(adapter) { _, which ->
                     val (practice, direction) = options[which]
                     onSelected(practice, direction)
                 }

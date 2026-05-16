@@ -16,7 +16,7 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
+        android:supportsRtl="false"
         android:theme="@style/Theme.CarpoolKids">
         <meta-data
             android:name="com.google.android.geo.API_KEY"
@@ -53,6 +53,14 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
+            android:theme="@style/Theme.CarpoolKids" />
+        <activity
+            android:name=".MapPickerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CarpoolKids" />
+        <activity
+            android:name=".SetHomeAddressActivity"
+            android:exported="false"
             android:theme="@style/Theme.CarpoolKids" />
     </application>
 

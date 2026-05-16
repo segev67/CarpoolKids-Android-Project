@@ -1,12 +1,19 @@
 package dev.segev.carpoolkids
 
+import android.app.Activity
 import android.content.DialogInterface
+import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.commit
+import com.google.android.gms.maps.model.LatLng
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import dev.segev.carpoolkids.data.DriveRequestRepository
@@ -15,8 +22,17 @@ import dev.segev.carpoolkids.data.UserRepository
 import dev.segev.carpoolkids.databinding.FragmentPracticeDetailBinding
 import dev.segev.carpoolkids.model.DriveRequest
 import dev.segev.carpoolkids.model.Practice
+import dev.segev.carpoolkids.routing.EtaCalculator
+import dev.segev.carpoolkids.routing.OsrmClient
+import dev.segev.carpoolkids.routing.PolylineDecoder
+import dev.segev.carpoolkids.routing.RouteOrderHeuristic
 import dev.segev.carpoolkids.utilities.Constants
+import dev.segev.carpoolkids.utilities.bidiSafe
+import okhttp3.Call
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import java.util.UUID
 
 /**
@@ -30,6 +46,16 @@ class PracticeDetailFragment : Fragment() {
 
     private var practice: Practice? = null
     private var isCancelingPractice = false
+    /** True when the viewing CHILD has a PENDING drive_request for this practice — hides Join. */
+    private var hasPendingDriveRequest = false
+    /** Guard against double-tap join/leave while a request is in flight. */
+    private var isJoinInFlight = false
+    private lateinit var mapPickerLauncher: ActivityResultLauncher<Intent>
+    /** Separate launcher for the post-join "set your home address" tip so its result writes to the user profile, not to the practice. */
+    private lateinit var homeMapPickerLauncher: ActivityResultLauncher<Intent>
+
+    /** Phase 4 debug: hold the OSRM Call so we can cancel it if the view is destroyed mid-flight. */
+    private var debugOsrmCall: Call? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -51,14 +77,64 @@ class PracticeDetailFragment : Fragment() {
             return
         }
 
+        mapPickerLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (_binding == null) return@registerForActivityResult
+            if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
+            val coords = MapPickerActivity.extractResult(result.data) ?: return@registerForActivityResult
+            val address = MapPickerActivity.extractAddress(result.data)
+            savePracticeCoords(coords.first, coords.second, address)
+        }
+
+        // Phase 3 — "Set" action on the post-join Snackbar launches the home picker here, NOT the
+        // practice-location picker above. Separate launcher avoids writing home coords into the practice.
+        homeMapPickerLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (_binding == null) return@registerForActivityResult
+            if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
+            val coords = MapPickerActivity.extractResult(result.data) ?: return@registerForActivityResult
+            val address = MapPickerActivity.extractAddress(result.data)
+            val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@registerForActivityResult
+            UserRepository.updateHomeAddress(uid, coords.first, coords.second, address) { ok, err ->
+                if (_binding == null) return@updateHomeAddress
+                if (ok) {
+                    Snackbar.make(binding.root, R.string.profile_home_saved, Snackbar.LENGTH_SHORT).show()
+                } else {
+                    Snackbar.make(
+                        binding.root,
+                        err ?: getString(R.string.profile_home_save_error),
+                        Snackbar.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+
         binding.practiceDetailSave.setOnClickListener { save(groupId) }
         binding.practiceDetailCancelPractice.setOnClickListener { confirmCancelPractice() }
+
+        // PHASE 4 DEBUG — remove before submission.
+        // Long-press the title to fire a hardcoded OSRM request and log the routing pipeline result.
+        // Filter Logcat for tag "RouteDebug" to inspect order, ETAs, polyline length, and totals.
+        binding.practiceDetailTitle.setOnLongClickListener {
+            debugFireTestRoute()
+            true
+        }
+        binding.practiceDetailSetLocationOnMap.setOnClickListener { openLocationPicker() }
+        binding.practiceDetailJoinButton.setOnClickListener { toggleJoinPractice() }
         binding.practiceDetailRequestTo.setOnClickListener { requestDrive(groupId, DriveRequest.DIRECTION_TO) }
         binding.practiceDetailRequestFrom.setOnClickListener { requestDrive(groupId, DriveRequest.DIRECTION_FROM) }
         binding.practiceDetailIllTakeTo.setOnClickListener { selfDeclare(groupId, DriveRequest.DIRECTION_TO) }
         binding.practiceDetailIllTakeFrom.setOnClickListener { selfDeclare(groupId, DriveRequest.DIRECTION_FROM) }
         binding.practiceDetailCancelTo.setOnClickListener { cancelDrive(groupId, DriveRequest.DIRECTION_TO) }
         binding.practiceDetailCancelFrom.setOnClickListener { cancelDrive(groupId, DriveRequest.DIRECTION_FROM) }
+        binding.practiceDetailViewPickupRoute.setOnClickListener {
+            openRouteScreen(Constants.RouteDirection.PICKUP)
+        }
+        binding.practiceDetailViewDropoffRoute.setOnClickListener {
+            openRouteScreen(Constants.RouteDirection.DROPOFF)
+        }
 
         PracticeRepository.getPracticeById(practiceId) { p, error ->
             if (_binding == null) return@getPracticeById
@@ -70,11 +146,14 @@ class PracticeDetailFragment : Fragment() {
             practice = p
             bindPractice(p)
             loadDriverNames(p)
+            loadMyDriveRequestsIfChild(groupId, practiceId)
         }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        debugOsrmCall?.cancel()
+        debugOsrmCall = null
         _binding = null
     }
 
@@ -95,11 +174,38 @@ class PracticeDetailFragment : Fragment() {
             if (isParent && !p.canceled) View.VISIBLE else View.GONE
         binding.practiceDetailCancelPractice.isEnabled = !isCancelingPractice
 
+        // Parents (only) can attach geo-coordinates to a practice via the map picker.
+        // Button text reflects whether coordinates already exist on this practice.
+        val canEditCoords = isParent && !p.canceled
+        binding.practiceDetailSetLocationOnMap.visibility =
+            if (canEditCoords) View.VISIBLE else View.GONE
+        binding.practiceDetailSetLocationOnMap.setText(
+            if (p.locationLat != null && p.locationLng != null)
+                R.string.practice_detail_change_location_on_map
+            else
+                R.string.practice_detail_set_location_on_map
+        )
+
+        // Phase 3 — children manage their own participation in the carpool roster.
+        val isChild = role == Constants.UserRole.CHILD
+        val isParticipant = currentUid.isNotBlank() && currentUid in p.participantUids
+        val canJoinLeave = isChild && !p.canceled && !hasPendingDriveRequest
+        binding.practiceDetailJoinButton.visibility = if (canJoinLeave) View.VISIBLE else View.GONE
+        binding.practiceDetailJoinButton.isEnabled = !isJoinInFlight
+        if (canJoinLeave) {
+            binding.practiceDetailJoinButton.setText(
+                if (isParticipant) R.string.practice_leave_button else R.string.practice_join_button
+            )
+        }
+        binding.practiceDetailJoinPendingHint.visibility =
+            if (isChild && !p.canceled && hasPendingDriveRequest) View.VISIBLE else View.GONE
+        updateRidersList(p)
+
         binding.practiceDetailDay.text = formatDayOfWeek(p.dateMillis)
         binding.practiceDetailDate.text = formatDate(p.dateMillis)
         binding.practiceDetailStartTime.setText(p.startTime)
         binding.practiceDetailEndTime.setText(p.endTime)
-        binding.practiceDetailLocation.setText(p.location)
+        binding.practiceDetailLocation.setText(bidiSafe(p.location))
         val noDriver = getString(R.string.schedule_no_driver)
         binding.practiceDetailDriverToValue.text = noDriver
         binding.practiceDetailDriverFromValue.text = noDriver
@@ -111,8 +217,18 @@ class PracticeDetailFragment : Fragment() {
             binding.practiceDetailIllTakeFrom.visibility = View.GONE
             binding.practiceDetailCancelTo.visibility = View.GONE
             binding.practiceDetailCancelFrom.visibility = View.GONE
+            binding.practiceDetailViewPickupRoute.visibility = View.GONE
+            binding.practiceDetailViewDropoffRoute.visibility = View.GONE
             return
         }
+
+        // Phase 6 — surface "View ... route" to every group member as soon as a driver claims the
+        // direction. The route screen itself handles the "not generated yet" empty state and gates
+        // the generate/regenerate CTAs to the assigned driver.
+        binding.practiceDetailViewPickupRoute.visibility =
+            if (!p.driverToUid.isNullOrBlank()) View.VISIBLE else View.GONE
+        binding.practiceDetailViewDropoffRoute.visibility =
+            if (!p.driverFromUid.isNullOrBlank()) View.VISIBLE else View.GONE
 
         binding.practiceDetailRequestTo.visibility = if (p.driverToUid.isNullOrBlank()) View.VISIBLE else View.GONE
         binding.practiceDetailRequestFrom.visibility = if (p.driverFromUid.isNullOrBlank()) View.VISIBLE else View.GONE
@@ -120,6 +236,165 @@ class PracticeDetailFragment : Fragment() {
         binding.practiceDetailIllTakeFrom.visibility = if (p.driverFromUid.isNullOrBlank() && isParent) View.VISIBLE else View.GONE
         binding.practiceDetailCancelTo.visibility = if (p.driverToUid == currentUid) View.VISIBLE else View.GONE
         binding.practiceDetailCancelFrom.visibility = if (p.driverFromUid == currentUid) View.VISIBLE else View.GONE
+    }
+
+    /**
+     * Load the current child's own drive_requests so the Join button can be hidden when there's an
+     * unresolved PENDING request (avoids double-bookkeeping with the existing request flow).
+     */
+    private fun loadMyDriveRequestsIfChild(groupId: String, practiceId: String) {
+        val role = arguments?.getString(ARG_ROLE).orEmpty()
+        if (role != Constants.UserRole.CHILD) return
+        if (groupId.isBlank()) return
+        val uid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+        if (uid.isBlank()) return
+        DriveRequestRepository.getDriveRequestsForGroupAndRequester(groupId, uid) { reqs, _ ->
+            if (_binding == null) return@getDriveRequestsForGroupAndRequester
+            hasPendingDriveRequest = reqs.any {
+                it.practiceId == practiceId && it.status == DriveRequest.STATUS_PENDING
+            }
+            practice?.let { bindPractice(it) }
+        }
+    }
+
+    /** Decide whether the tap should join or leave, based on current participation. */
+    private fun toggleJoinPractice() {
+        val p = practice ?: return
+        if (p.canceled || isJoinInFlight || hasPendingDriveRequest) return
+        val uid = FirebaseAuth.getInstance().currentUser?.uid.orEmpty()
+        if (uid.isBlank()) return
+        if (uid in p.participantUids) leavePracticeAction(uid) else joinPracticeAction(uid)
+    }
+
+    private fun joinPracticeAction(uid: String) {
+        val p = practice ?: return
+        isJoinInFlight = true
+        binding.practiceDetailJoinButton.isEnabled = false
+        PracticeRepository.joinPractice(p.id, uid) { ok, err ->
+            if (_binding == null) return@joinPractice
+            isJoinInFlight = false
+            if (!ok) {
+                binding.practiceDetailJoinButton.isEnabled = true
+                Snackbar.make(
+                    binding.root,
+                    err ?: getString(R.string.practice_join_failed),
+                    Snackbar.LENGTH_LONG
+                ).show()
+                return@joinPractice
+            }
+            practice = p.copy(participantUids = (p.participantUids + uid).distinct())
+            practice?.let { bindPractice(it) }
+            maybeShowSetHomeTip(uid)
+        }
+    }
+
+    private fun leavePracticeAction(uid: String) {
+        val p = practice ?: return
+        isJoinInFlight = true
+        binding.practiceDetailJoinButton.isEnabled = false
+        PracticeRepository.leavePractice(p.id, p.groupId, uid) { ok, err ->
+            if (_binding == null) return@leavePractice
+            isJoinInFlight = false
+            if (!ok) {
+                binding.practiceDetailJoinButton.isEnabled = true
+                Snackbar.make(
+                    binding.root,
+                    err ?: getString(R.string.practice_leave_failed),
+                    Snackbar.LENGTH_LONG
+                ).show()
+                return@leavePractice
+            }
+            practice = p.copy(participantUids = p.participantUids - uid)
+            practice?.let { bindPractice(it) }
+        }
+    }
+
+    /**
+     * After a successful join, nudge the child to set their home address if they haven't yet.
+     * Non-blocking; the dashboard banner remains as the long-term reminder.
+     */
+    private fun maybeShowSetHomeTip(uid: String) {
+        UserRepository.getUser(uid) { profile, _ ->
+            if (_binding == null) return@getUser
+            if (profile?.homeLat == null) {
+                Snackbar.make(
+                    binding.root,
+                    R.string.practice_join_set_home_tip,
+                    8_000
+                ).setAction(R.string.practice_join_set_home_action) {
+                    homeMapPickerLauncher.launch(
+                        MapPickerActivity.intentForHome(requireContext(), null, null)
+                    )
+                }.show()
+            }
+        }
+    }
+
+    /** Render "Riders (N): name, name, name" subtext from the practice's participantUids. */
+    private fun updateRidersList(p: Practice) {
+        if (p.participantUids.isEmpty()) {
+            binding.practiceDetailRidersLabel.visibility = View.GONE
+            binding.practiceDetailRidersValue.visibility = View.GONE
+            return
+        }
+        binding.practiceDetailRidersLabel.text =
+            getString(R.string.practice_riders_label, p.participantUids.size)
+        binding.practiceDetailRidersLabel.visibility = View.VISIBLE
+        binding.practiceDetailRidersValue.visibility = View.VISIBLE
+        binding.practiceDetailRidersValue.text = ""
+        UserRepository.getUsersByIds(p.participantUids) { profileMap ->
+            if (_binding == null) return@getUsersByIds
+            val names = p.participantUids.mapNotNull { uid ->
+                profileMap[uid]?.displayName?.takeIf { it.isNotBlank() }
+                    ?: profileMap[uid]?.email?.takeIf { it.isNotBlank() }
+            }
+            binding.practiceDetailRidersValue.text =
+                if (names.isNotEmpty()) names.joinToString(", ") { bidiSafe(it) }
+                else getString(R.string.join_request_requester_unknown)
+        }
+    }
+
+    private fun openLocationPicker() {
+        val p = practice ?: return
+        if (p.canceled) return
+        mapPickerLauncher.launch(
+            MapPickerActivity.intentForPracticeLocation(
+                requireContext(),
+                currentLat = p.locationLat,
+                currentLng = p.locationLng
+            )
+        )
+    }
+
+    private fun savePracticeCoords(lat: Double, lng: Double, addressLabel: String? = null) {
+        val p = practice ?: return
+        binding.practiceDetailSetLocationOnMap.isEnabled = false
+        PracticeRepository.updateLocationCoords(p.id, lat, lng, addressLabel) { ok, err ->
+            if (_binding == null) return@updateLocationCoords
+            binding.practiceDetailSetLocationOnMap.isEnabled = true
+            if (ok) {
+                // Reflect the new coords + (if provided) reverse-geocoded location in local state.
+                // bindPractice writes p.location into the EditText, so the field updates automatically.
+                val resolvedLocation = addressLabel?.takeIf { it.isNotBlank() } ?: p.location
+                practice = p.copy(
+                    locationLat = lat,
+                    locationLng = lng,
+                    location = resolvedLocation
+                )
+                practice?.let { bindPractice(it) }
+                Snackbar.make(
+                    binding.root,
+                    R.string.practice_detail_location_coords_saved,
+                    Snackbar.LENGTH_SHORT
+                ).show()
+            } else {
+                Snackbar.make(
+                    binding.root,
+                    err ?: getString(R.string.practice_detail_location_coords_save_error),
+                    Snackbar.LENGTH_LONG
+                ).show()
+            }
+        }
     }
 
     private fun confirmCancelPractice() {
@@ -295,6 +570,20 @@ class PracticeDetailFragment : Fragment() {
         }
     }
 
+    /** Phase 6 — open the shared route screen. Visible to every group member when a driver exists. */
+    private fun openRouteScreen(direction: String) {
+        val p = practice ?: return
+        if (p.canceled) return
+        parentFragmentManager.commit {
+            replace(
+                R.id.dashboard_fragment_container,
+                CarpoolRouteFragment.newInstance(p.id, direction),
+                "carpool_route"
+            )
+            addToBackStack("carpool_route")
+        }
+    }
+
     private fun loadDriverNames(p: Practice) {
         val toUid = p.driverToUid?.takeIf { it.isNotBlank() }
         val fromUid = p.driverFromUid?.takeIf { it.isNotBlank() }
@@ -319,8 +608,8 @@ class PracticeDetailFragment : Fragment() {
                         ?: getString(R.string.join_request_requester_unknown)
                 }
             } ?: noDriver
-            binding.practiceDetailDriverToValue.text = toName
-            binding.practiceDetailDriverFromValue.text = fromName
+            binding.practiceDetailDriverToValue.text = bidiSafe(toName)
+            binding.practiceDetailDriverFromValue.text = bidiSafe(fromName)
         }
     }
 
@@ -387,10 +676,77 @@ class PracticeDetailFragment : Fragment() {
         return "$day $month ${c.get(Calendar.YEAR)}"
     }
 
+    /**
+     * PHASE 4 DEBUG — remove before submission.
+     *
+     * Runs the full Phase 4 routing pipeline against a hardcoded Tel Aviv fixture: greedy ordering,
+     * OSRM call, polyline decode, ETA math. Everything is dumped to Logcat under tag "RouteDebug"
+     * so the math can be verified without any UI work. Triggered by long-pressing the screen title.
+     */
+    private fun debugFireTestRoute() {
+        if (debugOsrmCall != null) {
+            Log.d(DEBUG_TAG, "Test route already in flight; ignoring tap")
+            return
+        }
+        val driverHome = LatLng(32.0853, 34.7818)
+        val practiceLoc = LatLng(32.1100, 34.8000)
+        val stops = listOf(
+            "kid-A" to LatLng(32.0900, 34.7700),
+            "kid-B" to LatLng(32.0950, 34.7900),
+            "kid-C" to LatLng(32.0820, 34.7950)
+        )
+        val ordered = RouteOrderHeuristic.greedyOrder(driverHome, stops, practiceLoc, practiceLoc)
+        val coords = listOf(driverHome) + ordered.map { it.second } + practiceLoc
+        Log.d(DEBUG_TAG, "Visit order: ${ordered.joinToString(" → ") { it.first }}")
+
+        debugOsrmCall = OsrmClient.fetchRoute(coords) { result, err ->
+            debugOsrmCall = null
+            if (err != null || result == null) {
+                Log.w(DEBUG_TAG, "OSRM failed: ${err ?: "null result"}")
+                return@fetchRoute
+            }
+            val km = result.totalDistanceMeters / 1000.0
+            val minutes = result.totalDurationSec / 60.0
+            Log.d(
+                DEBUG_TAG,
+                "Route: %.2f km, %.1f min, polyline=%d chars, legs=%d".format(
+                    Locale.US, km, minutes, result.polyline.length, result.legs.size
+                )
+            )
+            val decoded = PolylineDecoder.decode(result.polyline)
+            Log.d(DEBUG_TAG, "Decoded polyline points: ${decoded.size}")
+
+            val pretendStart = System.currentTimeMillis() + 60 * 60_000L
+            val departure = EtaCalculator.recommendedDeparture(
+                trainingStartMillis = pretendStart,
+                totalLegSec = result.totalDurationSec,
+                numStops = ordered.size,
+                dwellSec = DEBUG_DWELL_SEC,
+                bufferSec = DEBUG_BUFFER_SEC
+            )
+            val etas = EtaCalculator.etaPerStop(
+                departureMs = departure,
+                legDurations = result.legs.map { it.durationSec },
+                dwellSec = DEBUG_DWELL_SEC
+            )
+            val fmt = SimpleDateFormat("HH:mm:ss", Locale.US)
+            Log.d(DEBUG_TAG, "Pretend practice start: ${fmt.format(Date(pretendStart))}")
+            Log.d(DEBUG_TAG, "Recommended depart:     ${fmt.format(Date(departure))}")
+            etas.forEachIndexed { i, eta ->
+                val label = if (i < ordered.size) ordered[i].first else "practice"
+                Log.d(DEBUG_TAG, "ETA #$i ($label): ${fmt.format(Date(eta))}")
+            }
+        }
+    }
+
     companion object {
         private const val ARG_PRACTICE_ID = "practice_id"
         private const val ARG_GROUP_ID = "group_id"
         private const val ARG_ROLE = "role"
+
+        private const val DEBUG_TAG = "RouteDebug"
+        private const val DEBUG_DWELL_SEC = 60
+        private const val DEBUG_BUFFER_SEC = 300
 
         fun newInstance(practiceId: String, groupId: String, role: String): PracticeDetailFragment =
             PracticeDetailFragment().apply {

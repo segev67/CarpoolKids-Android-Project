@@ -11,16 +11,14 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="@dimen/dashboard_screen_padding">
+        android:padding="@dimen/spacing_section">
 
         <!-- Carpool: <group name> or "No active group" -->
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/group_hub_header_carpool"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="@dimen/text_title_size"
-            android:textColor="@color/dashboard_text_primary"
-            android:textStyle="bold"
+            style="@style/TextAppearance.Dashboard.Title"
             android:maxLines="1"
             android:ellipsize="end"
             tools:text="Carpool: My Team" />
@@ -31,8 +29,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_xs"
-            android:textSize="@dimen/text_section_label_size"
-            android:textColor="@color/dashboard_text_secondary"
+            style="@style/TextAppearance.Dashboard.SectionLabel"
             android:text="@string/group_hub_header_subtitle"
             android:visibility="gone"
             tools:visibility="visible" />
@@ -43,9 +40,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_lg"
             android:text="@string/group_hub_title"
-            android:textSize="@dimen/text_title_size"
-            android:textColor="@color/dashboard_text_primary"
-            android:textStyle="bold" />
+            style="@style/TextAppearance.Dashboard.Title" />
 
         <androidx.cardview.widget.CardView
             android:id="@+id/group_hub_card_details"
@@ -62,18 +57,16 @@
                 android:id="@+id/group_hub_label_details"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="@dimen/card_padding"
+                android:padding="@dimen/spacing_lg"
                 android:text="@string/group_hub_details"
-                android:textSize="@dimen/text_card_time_size"
-                android:textColor="@color/dashboard_text_primary"
-                android:textStyle="bold" />
+                style="@style/TextAppearance.Dashboard.Title" />
         </androidx.cardview.widget.CardView>
 
         <androidx.cardview.widget.CardView
             android:id="@+id/group_hub_card_invite"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/card_margin_between"
+            android:layout_marginTop="@dimen/spacing_md"
             android:clickable="true"
             android:focusable="true"
             app:cardCornerRadius="@dimen/card_corner_radius"
@@ -84,18 +77,16 @@
                 android:id="@+id/group_hub_label_invite"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="@dimen/card_padding"
+                android:padding="@dimen/spacing_lg"
                 android:text="@string/group_hub_invite"
-                android:textSize="@dimen/text_card_time_size"
-                android:textColor="@color/dashboard_text_primary"
-                android:textStyle="bold" />
+                style="@style/TextAppearance.Dashboard.Title" />
         </androidx.cardview.widget.CardView>
 
         <androidx.cardview.widget.CardView
             android:id="@+id/group_hub_card_join_requests"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/card_margin_between"
+            android:layout_marginTop="@dimen/spacing_md"
             android:clickable="true"
             android:focusable="true"
             app:cardCornerRadius="@dimen/card_corner_radius"
@@ -106,10 +97,8 @@
                 android:id="@+id/group_hub_label_join_requests"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="@dimen/card_padding"
-                android:textSize="@dimen/text_card_time_size"
-                android:textColor="@color/dashboard_text_primary"
-                android:textStyle="bold"
+                android:padding="@dimen/spacing_lg"
+                style="@style/TextAppearance.Dashboard.Title"
                 tools:text="Join requests (0)" />
         </androidx.cardview.widget.CardView>
 
@@ -117,7 +106,7 @@
             android:id="@+id/group_hub_card_blocked"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/card_margin_between"
+            android:layout_marginTop="@dimen/spacing_md"
             android:layout_marginBottom="@dimen/spacing_lg"
             android:clickable="true"
             android:focusable="true"
@@ -129,11 +118,9 @@
                 android:id="@+id/group_hub_label_blocked"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="@dimen/card_padding"
+                android:padding="@dimen/spacing_lg"
                 android:text="@string/group_hub_blocked_users"
-                android:textSize="@dimen/text_card_time_size"
-                android:textColor="@color/dashboard_text_primary"
-                android:textStyle="bold" />
+                style="@style/TextAppearance.Dashboard.Title" />
         </androidx.cardview.widget.CardView>
     </LinearLayout>
 </ScrollView>

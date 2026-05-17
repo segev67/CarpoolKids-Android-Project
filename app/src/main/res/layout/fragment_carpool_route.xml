@@ -50,7 +50,7 @@
         android:background="@color/status_pending_orange"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="@dimen/dashboard_screen_padding"
+        android:paddingHorizontal="@dimen/spacing_section"
         android:paddingVertical="@dimen/spacing_sm"
         android:visibility="gone"
         app:layout_constraintTop_toBottomOf="@id/route_toolbar"
@@ -74,7 +74,7 @@
             android:minWidth="0dp"
             android:paddingHorizontal="@dimen/spacing_md"
             android:text="@string/route_regenerate"
-            android:textSize="@dimen/text_badge_size"
+            android:textSize="@dimen/text_button_compact"
             android:visibility="gone"
             tools:visibility="visible" />
     </LinearLayout>
@@ -111,7 +111,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="@dimen/card_padding">
+            android:padding="@dimen/spacing_lg">
 
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/route_summary_anchor_label"
@@ -126,7 +126,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/dashboard_text_primary"
-                android:textSize="20sp"
+                android:textSize="@dimen/text_summary_value_size"
                 android:textStyle="bold"
                 tools:text="16:35" />
 
@@ -136,7 +136,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/spacing_xs"
                 android:textColor="@color/dashboard_text_primary"
-                android:textSize="@dimen/text_card_day_size"
+                android:textSize="@dimen/text_section_label_size"
                 tools:text="4.2 km · 12 min" />
 
             <com.google.android.material.textview.MaterialTextView
@@ -170,7 +170,7 @@
         android:layout_height="0dp"
         android:background="@color/dashboard_card_background"
         android:orientation="vertical"
-        android:paddingHorizontal="@dimen/dashboard_screen_padding"
+        android:paddingHorizontal="@dimen/spacing_section"
         android:paddingTop="@dimen/spacing_md"
         android:paddingBottom="@dimen/spacing_md"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -210,7 +210,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/route_regenerate"
-                android:textSize="@dimen/text_badge_size" />
+                android:textSize="@dimen/text_button_compact" />
         </LinearLayout>
     </LinearLayout>
 
@@ -222,7 +222,7 @@
         android:background="@color/dashboard_card_background"
         android:gravity="center"
         android:orientation="vertical"
-        android:paddingHorizontal="@dimen/dashboard_screen_padding"
+        android:paddingHorizontal="@dimen/spacing_section"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="@id/route_panel"
         app:layout_constraintEnd_toEndOf="@id/route_panel"
@@ -236,7 +236,7 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:textColor="@color/dashboard_text_primary"
-            android:textSize="@dimen/text_card_time_size"
+            android:textSize="@dimen/text_title_size"
             tools:text="No route yet. Generate one to share with the group." />
 
         <com.google.android.material.button.MaterialButton

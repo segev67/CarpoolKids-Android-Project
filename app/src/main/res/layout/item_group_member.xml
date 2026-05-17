@@ -13,7 +13,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="@dimen/card_padding">
+        android:padding="@dimen/spacing_lg">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -26,7 +26,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:textSize="@dimen/text_card_time_size"
+                android:textSize="@dimen/text_title_size"
                 android:textColor="@color/dashboard_text_primary"
                 android:textStyle="bold"
                 android:maxLines="1"
@@ -39,7 +39,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/spacing_sm"
                 android:text="@string/group_details_you_badge"
-                android:textSize="@dimen/text_card_day_size"
+                android:textSize="@dimen/text_section_label_size"
                 android:textStyle="bold"
                 android:textColor="@color/dashboard_text_secondary"
                 android:visibility="gone"
@@ -51,7 +51,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_xs"
-            android:textSize="@dimen/text_card_day_size"
+            android:textSize="@dimen/text_section_label_size"
             android:textColor="@color/dashboard_text_secondary"
             android:maxLines="1"
             android:ellipsize="end"
@@ -71,7 +71,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_xs"
-            android:textSize="@dimen/text_card_day_size"
+            android:textSize="@dimen/text_section_label_size"
             android:textColor="@color/dashboard_text_secondary"
             android:maxLines="2"
             android:ellipsize="end"

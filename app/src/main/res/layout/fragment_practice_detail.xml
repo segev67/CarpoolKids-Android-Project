@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="@color/dashboard_background"
     android:fillViewport="true"
-    android:padding="@dimen/dashboard_screen_padding">
+    android:padding="@dimen/spacing_section">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -18,9 +18,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/practice_detail_title"
-            android:textSize="@dimen/text_title_size"
-            android:textColor="@color/dashboard_text_primary"
-            android:textStyle="bold" />
+            style="@style/TextAppearance.Dashboard.Title" />
 
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/practice_detail_canceled_banner"
@@ -46,7 +44,7 @@
             android:id="@+id/practice_detail_day"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="@dimen/text_card_time_size"
+            android:textSize="@dimen/text_title_size"
             android:textColor="@color/dashboard_text_primary"
             android:maxLines="1"
             android:ellipsize="end"
@@ -65,7 +63,7 @@
             android:id="@+id/practice_detail_date"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="@dimen/text_card_time_size"
+            android:textSize="@dimen/text_title_size"
             android:textColor="@color/dashboard_text_primary"
             android:maxLines="1"
             android:ellipsize="end"
@@ -85,10 +83,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:minHeight="@dimen/button_min_height"
-            android:padding="@dimen/card_padding"
+            android:padding="@dimen/spacing_lg"
             android:background="@color/dashboard_card_background"
             android:inputType="time"
-            android:textSize="@dimen/text_card_time_size"
+            android:textSize="@dimen/text_title_size"
             android:textColor="@color/dashboard_text_primary"
             android:textColorHint="@color/dashboard_text_secondary"
             android:maxLines="1"
@@ -109,10 +107,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:minHeight="@dimen/button_min_height"
-            android:padding="@dimen/card_padding"
+            android:padding="@dimen/spacing_lg"
             android:background="@color/dashboard_card_background"
             android:inputType="time"
-            android:textSize="@dimen/text_card_time_size"
+            android:textSize="@dimen/text_title_size"
             android:textColor="@color/dashboard_text_primary"
             android:textColorHint="@color/dashboard_text_secondary"
             android:maxLines="1"
@@ -134,14 +132,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:minHeight="@dimen/button_min_height"
-            android:padding="@dimen/card_padding"
+            android:padding="@dimen/spacing_lg"
             android:background="@color/dashboard_card_background"
             android:cursorVisible="false"
             android:focusable="false"
             android:focusableInTouchMode="false"
             android:inputType="none"
             android:longClickable="false"
-            android:textSize="@dimen/text_card_time_size"
+            android:textSize="@dimen/text_title_size"
             android:textColor="@color/dashboard_text_primary"
             android:textColorHint="@color/dashboard_text_secondary"
             android:textDirection="ltr"
@@ -172,7 +170,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="@dimen/card_padding">
+                android:padding="@dimen/spacing_lg">
 
                 <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/practice_detail_transport_title"
@@ -191,7 +189,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_md"
                     android:text="@string/practice_join_button"
-                    android:textSize="@dimen/text_badge_size"
+                    android:textSize="@dimen/text_button_compact"
                     android:visibility="gone"
                     tools:visibility="visible" />
 
@@ -225,7 +223,7 @@
                     android:layout_marginTop="@dimen/spacing_xs"
                     android:textColor="@color/dashboard_text_primary"
                     android:textDirection="ltr"
-                    android:textSize="@dimen/text_card_day_size"
+                    android:textSize="@dimen/text_section_label_size"
                     android:visibility="gone"
                     tools:text="Daniel, Maya, Yossi"
                     tools:visibility="visible" />
@@ -245,7 +243,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_xs"
-                    android:textSize="@dimen/text_card_day_size"
+                    android:textSize="@dimen/text_section_label_size"
                     android:textColor="@color/dashboard_text_primary"
                     android:textDirection="ltr"
                     android:maxLines="1"
@@ -266,7 +264,7 @@
                         android:layout_weight="1"
                         android:singleLine="true"
                         android:maxLines="1"
-                        android:textSize="@dimen/text_badge_size"
+                        android:textSize="@dimen/text_button_compact"
                         android:text="@string/carpool_request"
                         android:visibility="gone" />
 
@@ -279,7 +277,7 @@
                         android:layout_weight="1"
                         android:singleLine="true"
                         android:maxLines="1"
-                        android:textSize="@dimen/text_badge_size"
+                        android:textSize="@dimen/text_button_compact"
                         android:text="@string/drive_request_ill_take_to"
                         android:visibility="gone" />
                 </LinearLayout>
@@ -290,7 +288,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_xs"
-                    android:textSize="@dimen/text_badge_size"
+                    android:textSize="@dimen/text_button_compact"
                     android:text="@string/drive_request_cancel_drive"
                     android:visibility="gone" />
 
@@ -309,7 +307,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_xs"
-                    android:textSize="@dimen/text_card_day_size"
+                    android:textSize="@dimen/text_section_label_size"
                     android:textColor="@color/dashboard_text_primary"
                     android:textDirection="ltr"
                     android:maxLines="1"
@@ -330,7 +328,7 @@
                         android:layout_weight="1"
                         android:singleLine="true"
                         android:maxLines="1"
-                        android:textSize="@dimen/text_badge_size"
+                        android:textSize="@dimen/text_button_compact"
                         android:text="@string/carpool_request"
                         android:visibility="gone" />
 
@@ -343,7 +341,7 @@
                         android:layout_weight="1"
                         android:singleLine="true"
                         android:maxLines="1"
-                        android:textSize="@dimen/text_badge_size"
+                        android:textSize="@dimen/text_button_compact"
                         android:text="@string/drive_request_ill_take_from"
                         android:visibility="gone" />
                 </LinearLayout>
@@ -354,7 +352,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_xs"
-                    android:textSize="@dimen/text_badge_size"
+                    android:textSize="@dimen/text_button_compact"
                     android:text="@string/drive_request_cancel_drive"
                     android:visibility="gone" />
 
@@ -367,7 +365,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_md"
-                    android:textSize="@dimen/text_badge_size"
+                    android:textSize="@dimen/text_button_compact"
                     android:text="@string/route_view_pickup"
                     android:visibility="gone"
                     tools:visibility="visible" />
@@ -378,7 +376,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_xs"
-                    android:textSize="@dimen/text_badge_size"
+                    android:textSize="@dimen/text_button_compact"
                     android:text="@string/route_view_dropoff"
                     android:visibility="gone"
                     tools:visibility="visible" />

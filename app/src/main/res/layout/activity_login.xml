@@ -5,6 +5,7 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/dashboard_background"
     tools:context=".LoginActivity">
 
     <!-- Sign-up / auth error (existing) -->
@@ -16,7 +17,7 @@
         android:layout_marginEnd="@dimen/spacing_section"
         android:gravity="center"
         android:textColor="?attr/colorError"
-        android:textSize="16sp"
+        android:textSize="@dimen/text_title_size"
         android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@+id/btn_go_to_sign_in"
         app:layout_constraintEnd_toEndOf="parent"
@@ -60,7 +61,7 @@
         android:layout_marginEnd="@dimen/spacing_section"
         android:gravity="center"
         android:textColor="?attr/colorError"
-        android:textSize="16sp"
+        android:textSize="@dimen/text_title_size"
         android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@+id/btn_retry_profile"
         app:layout_constraintEnd_toEndOf="parent"

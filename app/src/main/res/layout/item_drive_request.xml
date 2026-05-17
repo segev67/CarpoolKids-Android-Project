@@ -12,7 +12,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="@dimen/card_padding">
+        android:padding="@dimen/spacing_lg">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -40,14 +40,14 @@
 
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/item_drive_request_practice_date"
-            style="@style/TextAppearance.Home.TeamSubtitle"
+            style="@style/TextAppearance.Dashboard.SectionLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_xs" />
 
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/item_drive_request_resolved_by"
-            style="@style/TextAppearance.Home.TeamSubtitle"
+            style="@style/TextAppearance.Dashboard.SectionLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_xs"
@@ -70,7 +70,7 @@
 
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/item_drive_request_time"
-                style="@style/TextAppearance.Home.TeamSubtitle"
+                style="@style/TextAppearance.Dashboard.SectionLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/spacing_xs" />
@@ -93,7 +93,7 @@
 
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/item_drive_request_location"
-                style="@style/TextAppearance.Home.TeamSubtitle"
+                style="@style/TextAppearance.Dashboard.SectionLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/spacing_xs"

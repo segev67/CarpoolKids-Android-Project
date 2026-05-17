@@ -14,7 +14,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:padding="@dimen/card_padding">
+        android:padding="@dimen/spacing_lg">
 
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/item_blocked_user_label"

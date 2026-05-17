@@ -19,7 +19,7 @@
         android:background="@drawable/bg_route_stop_chip"
         android:gravity="center"
         android:textColor="@color/white"
-        android:textSize="14sp"
+        android:textSize="@dimen/text_section_label_size"
         android:textStyle="bold"
         tools:text="1" />
 
@@ -45,7 +45,7 @@
                 android:maxLines="1"
                 android:textColor="@color/dashboard_text_primary"
                 android:textDirection="ltr"
-                android:textSize="@dimen/text_card_time_size"
+                android:textSize="@dimen/text_title_size"
                 android:textStyle="bold"
                 tools:text="Daniel" />
 
@@ -59,7 +59,7 @@
                 android:paddingVertical="2dp"
                 android:text="@string/route_you_badge"
                 android:textColor="@color/white"
-                android:textSize="10sp"
+                android:textSize="@dimen/text_micro_size"
                 android:textStyle="bold"
                 android:visibility="gone"
                 tools:visibility="visible" />

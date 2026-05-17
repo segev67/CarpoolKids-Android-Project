@@ -47,22 +47,11 @@
         <item name="android:textSize">@dimen/join_request_action_text_size</item>
     </style>
 
-    <!-- Home: section title (e.g. My Teams, Today's Training) -->
-    <style name="TextAppearance.Home.SectionTitle" parent="TextAppearance.MaterialComponents.Headline6">
+    <!-- Home: team card title (kept distinct from Dashboard.Title; uses Subtitle1 parent for different letter-spacing) -->
+    <style name="TextAppearance.Home.TeamName" parent="TextAppearance.MaterialComponents.Subtitle1">
         <item name="android:textSize">@dimen/text_title_size</item>
         <item name="android:textColor">@color/dashboard_text_primary</item>
         <item name="android:textStyle">bold</item>
-    </style>
-    <!-- Home: team card title -->
-    <style name="TextAppearance.Home.TeamName" parent="TextAppearance.MaterialComponents.Subtitle1">
-        <item name="android:textSize">16sp</item>
-        <item name="android:textColor">@color/dashboard_text_primary</item>
-        <item name="android:textStyle">bold</item>
-    </style>
-    <!-- Home: team card subtitle / members -->
-    <style name="TextAppearance.Home.TeamSubtitle" parent="TextAppearance.MaterialComponents.Body2">
-        <item name="android:textSize">@dimen/text_section_label_size</item>
-        <item name="android:textColor">@color/dashboard_text_secondary</item>
     </style>
 
     <!-- Drive-request picker dialog: Applied via AlertDialog.Builder(ctx, R.style.ThemeOverlay_CarpoolKids_PickerDialog)

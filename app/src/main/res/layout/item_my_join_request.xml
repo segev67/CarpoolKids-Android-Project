@@ -14,7 +14,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:padding="@dimen/card_padding">
+        android:padding="@dimen/spacing_lg">
 
         <LinearLayout
             android:layout_width="0dp"
@@ -31,7 +31,7 @@
 
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/item_my_request_time"
-                style="@style/TextAppearance.Home.TeamSubtitle"
+                style="@style/TextAppearance.Dashboard.SectionLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/spacing_xs"

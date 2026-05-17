@@ -7,7 +7,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background_dark"
-    android:padding="@dimen/dashboard_screen_padding"
+    android:padding="@dimen/spacing_section"
     tools:context=".ChooseRoleActivity">
 
     <com.google.android.material.textview.MaterialTextView
@@ -17,7 +17,7 @@
         android:gravity="center"
         android:text="@string/choose_role_title"
         android:textColor="@color/text_primary"
-        android:textSize="22sp"
+        android:textSize="@dimen/text_screen_title_size"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -66,7 +66,7 @@
         android:layout_marginTop="@dimen/spacing_section"
         android:gravity="center"
         android:textColor="@color/error_light"
-        android:textSize="16sp"
+        android:textSize="@dimen/text_title_size"
         android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

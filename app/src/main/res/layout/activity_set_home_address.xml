@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:background="@color/dashboard_background"
     android:fillViewport="true"
-    android:padding="@dimen/dashboard_screen_padding">
+    android:padding="@dimen/spacing_section">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -47,7 +47,7 @@
             style="@style/Widget.CarpoolKids.Button.Outlined"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/button_margin_between"
+            android:layout_marginTop="@dimen/spacing_md"
             android:text="@string/set_home_address_skip_button" />
 
         <com.google.android.material.progressindicator.CircularProgressIndicator

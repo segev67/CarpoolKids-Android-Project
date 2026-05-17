@@ -4,9 +4,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/dashboard_background"
+    android:clipToPadding="false"
     android:fillViewport="true"
-    android:padding="@dimen/dashboard_screen_padding"
-    android:background="@color/dashboard_background">
+    android:padding="@dimen/spacing_section">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
@@ -59,7 +60,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="@dimen/card_padding">
+                android:padding="@dimen/spacing_lg">
 
                 <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/dashboard_home_home_address_title"
@@ -93,7 +94,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/profile_home_banner_action"
-                        android:textSize="@dimen/text_badge_size" />
+                        android:textSize="@dimen/text_button_compact" />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -115,7 +116,7 @@
             style="@style/Widget.CarpoolKids.CardView.Dashboard"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/card_margin_between"
+            android:layout_marginTop="@dimen/spacing_md"
             android:visibility="gone"
             app:cardCornerRadius="@dimen/card_corner_radius"
             app:cardElevation="@dimen/card_elevation"
@@ -128,7 +129,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="@dimen/card_padding">
+                android:padding="@dimen/spacing_lg">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -154,7 +155,7 @@
                 </LinearLayout>
                 <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/dashboard_home_today_date"
-                    style="@style/TextAppearance.Home.TeamSubtitle"
+                    style="@style/TextAppearance.Dashboard.SectionLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_xs"
@@ -169,14 +170,14 @@
                     tools:text="Time range" />
                 <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/dashboard_home_today_location"
-                    style="@style/TextAppearance.Home.TeamSubtitle"
+                    style="@style/TextAppearance.Dashboard.SectionLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_xs"
                     tools:text="Location" />
                 <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/dashboard_home_today_address"
-                    style="@style/TextAppearance.Home.TeamSubtitle"
+                    style="@style/TextAppearance.Dashboard.SectionLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/spacing_xs"
@@ -193,12 +194,12 @@
                     tools:visibility="visible">
                     <com.google.android.material.textview.MaterialTextView
                         android:id="@+id/dashboard_home_today_to_label"
-                        style="@style/TextAppearance.Home.TeamSubtitle"
+                        style="@style/TextAppearance.Dashboard.SectionLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content" />
                     <com.google.android.material.textview.MaterialTextView
                         android:id="@+id/dashboard_home_today_driver_to"
-                        style="@style/TextAppearance.Home.TeamSubtitle"
+                        style="@style/TextAppearance.Dashboard.SectionLabel"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -216,12 +217,12 @@
                     tools:visibility="visible">
                     <com.google.android.material.textview.MaterialTextView
                         android:id="@+id/dashboard_home_today_from_label"
-                        style="@style/TextAppearance.Home.TeamSubtitle"
+                        style="@style/TextAppearance.Dashboard.SectionLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content" />
                     <com.google.android.material.textview.MaterialTextView
                         android:id="@+id/dashboard_home_today_driver_back"
-                        style="@style/TextAppearance.Home.TeamSubtitle"
+                        style="@style/TextAppearance.Dashboard.SectionLabel"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -235,10 +236,10 @@
         <!-- Shown when there is no training today -->
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/dashboard_home_no_training_message"
-            style="@style/TextAppearance.Home.TeamSubtitle"
+            style="@style/TextAppearance.Dashboard.SectionLabel"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/card_margin_between"
+            android:layout_marginTop="@dimen/spacing_md"
             android:gravity="center"
             android:text="@string/home_today_day_off"
             android:visibility="gone"
@@ -269,10 +270,10 @@
         <!-- Exactly one of empty vs list is visible; default empty so section never collapses -->
         <com.google.android.material.textview.MaterialTextView
             android:id="@+id/dashboard_home_my_requests_empty"
-            style="@style/TextAppearance.Home.TeamSubtitle"
+            style="@style/TextAppearance.Dashboard.SectionLabel"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/card_margin_between"
+            android:layout_marginTop="@dimen/spacing_md"
             android:gravity="center"
             android:text="@string/my_requests_empty"
             android:visibility="visible"
@@ -318,7 +319,7 @@
             style="@style/Widget.CarpoolKids.Button"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/button_margin_between"
+            android:layout_marginTop="@dimen/spacing_md"
             android:text="@string/btn_create_join_group"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
@@ -329,7 +330,7 @@
             style="@style/Widget.CarpoolKids.Button.Outlined"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/button_margin_between"
+            android:layout_marginTop="@dimen/spacing_md"
             android:text="@string/leave_carpool"
             android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"

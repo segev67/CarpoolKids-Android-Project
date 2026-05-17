@@ -49,6 +49,7 @@ class DriversRequestsFragment : Fragment() {
         val groupId = arguments?.getString(ARG_GROUP_ID).orEmpty()
         val role = arguments?.getString(ARG_ROLE).orEmpty()
         val isParent = role == Constants.UserRole.PARENT
+        val isChild = role == Constants.UserRole.CHILD
 
         adapter = DriveRequestListAdapter(
             requesterNames = emptyMap(),
@@ -60,6 +61,8 @@ class DriversRequestsFragment : Fragment() {
         binding.driveRequestsList.layoutManager = LinearLayoutManager(requireContext())
         binding.driveRequestsList.adapter = adapter
 
+        // Symmetric role gating: children request rides, parents declare they'll drive.
+        binding.driveRequestsRequestBtn.visibility = if (isChild) View.VISIBLE else View.GONE
         binding.driveRequestsRequestBtn.setOnClickListener { openRequestDriveDialog(groupId) }
         binding.driveRequestsIllDriveBtn.visibility = if (isParent) View.VISIBLE else View.GONE
         binding.driveRequestsIllDriveBtn.setOnClickListener { openIllDriveDialog(groupId) }

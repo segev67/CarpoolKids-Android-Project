@@ -1112,9 +1112,12 @@ class FirestoreManager private constructor(context: Context) {
     ) {
         val practiceRef = db.collection(Constants.Firestore.COLLECTION_PRACTICES).document(request.practiceId)
         val requestRef = db.collection(Constants.Firestore.COLLECTION_DRIVE_REQUESTS).document(request.id)
+        val requesterRef = db.collection(Constants.Firestore.COLLECTION_USERS).document(request.requesterUid)
         db.runTransaction { transaction: Transaction ->
+            // All transaction reads must happen before any writes.
             val practiceSnap = transaction.get(practiceRef)
             val requestSnap = transaction.get(requestRef)
+            val requesterSnap = transaction.get(requesterRef)
             if (practiceSnap.getBoolean("canceled") == true) {
                 throw RuntimeException("Practice was canceled")
             }
@@ -1130,15 +1133,15 @@ class FirestoreManager private constructor(context: Context) {
                 throw RuntimeException("Slot already taken or request no longer pending")
             }
             // Phase 3: same transaction also arrayUnions the requester into participantUids so the route
-            // roster stays in sync with "this child is riding." Partial state is not acceptable.
+            // roster stays in sync with "this child is riding." Defense-in-depth: only children become
+            // riders, even if an older client created the request from a parent account.
             val driverField = if (request.direction == DriveRequest.DIRECTION_TO) "driverToUid" else "driverFromUid"
-            transaction.update(
-                practiceRef,
-                mapOf(
-                    driverField to acceptedByUid,
-                    "participantUids" to FieldValue.arrayUnion(request.requesterUid)
-                )
-            )
+            val requesterIsChild = requesterSnap.getString("role") == Constants.UserRole.CHILD
+            val practiceUpdates = mutableMapOf<String, Any>(driverField to acceptedByUid)
+            if (requesterIsChild) {
+                practiceUpdates["participantUids"] = FieldValue.arrayUnion(request.requesterUid)
+            }
+            transaction.update(practiceRef, practiceUpdates)
             transaction.update(
                 requestRef,
                 "status", DriveRequest.STATUS_APPROVED,

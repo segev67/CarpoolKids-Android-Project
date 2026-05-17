@@ -212,9 +212,13 @@ class PracticeDetailFragment : Fragment() {
         binding.practiceDetailStartTime.setText(p.startTime)
         binding.practiceDetailEndTime.setText(p.endTime)
         binding.practiceDetailLocation.setText(bidiSafe(p.location))
+        // Only show the "No driver" placeholder when there is genuinely no driver.
+        // When a driver is assigned, loadDriverNames() is the source of truth — overwriting
+        // here would race with that async fetch on re-binds (e.g. after the child's pending
+        // drive-request lookup returns).
         val noDriver = getString(R.string.schedule_no_driver)
-        binding.practiceDetailDriverToValue.text = noDriver
-        binding.practiceDetailDriverFromValue.text = noDriver
+        if (p.driverToUid.isNullOrBlank()) binding.practiceDetailDriverToValue.text = noDriver
+        if (p.driverFromUid.isNullOrBlank()) binding.practiceDetailDriverFromValue.text = noDriver
 
         if (p.canceled) {
             binding.practiceDetailRequestTo.visibility = View.GONE
@@ -236,8 +240,10 @@ class PracticeDetailFragment : Fragment() {
         binding.practiceDetailViewDropoffRoute.visibility =
             if (!p.driverFromUid.isNullOrBlank()) View.VISIBLE else View.GONE
 
-        binding.practiceDetailRequestTo.visibility = if (p.driverToUid.isNullOrBlank()) View.VISIBLE else View.GONE
-        binding.practiceDetailRequestFrom.visibility = if (p.driverFromUid.isNullOrBlank()) View.VISIBLE else View.GONE
+        // Only children request rides (becoming a rider in participantUids on approval);
+        // only parents declare "I'll drive."
+        binding.practiceDetailRequestTo.visibility = if (p.driverToUid.isNullOrBlank() && isChild) View.VISIBLE else View.GONE
+        binding.practiceDetailRequestFrom.visibility = if (p.driverFromUid.isNullOrBlank() && isChild) View.VISIBLE else View.GONE
         binding.practiceDetailIllTakeTo.visibility = if (p.driverToUid.isNullOrBlank() && isParent) View.VISIBLE else View.GONE
         binding.practiceDetailIllTakeFrom.visibility = if (p.driverFromUid.isNullOrBlank() && isParent) View.VISIBLE else View.GONE
         binding.practiceDetailCancelTo.visibility = if (p.driverToUid == currentUid) View.VISIBLE else View.GONE

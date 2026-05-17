@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Endpoint row: shown at the top of the route list as the origin (driver home for PICKUP /
+     practice for DROPOFF) and, only for PICKUP, at the bottom as the destination (practice).
+     Mirrors item_route_stop.xml visually but uses an icon instead of a numbered chip. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingVertical="@dimen/spacing_sm">
+
+    <ImageView
+        android:id="@+id/item_route_endpoint_icon"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:background="@drawable/bg_route_stop_chip"
+        android:importantForAccessibility="no"
+        android:padding="6dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_location"
+        app:tint="@color/white" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/spacing_md"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/item_route_endpoint_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/dashboard_text_primary"
+            android:textSize="@dimen/text_title_size"
+            android:textStyle="bold"
+            tools:text="Start" />
+
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/item_route_endpoint_address"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textColor="@color/dashboard_text_secondary"
+            android:textDirection="ltr"
+            android:textSize="@dimen/text_section_label_size"
+            tools:text="12 Rothschild Blvd, Tel Aviv" />
+    </LinearLayout>
+</LinearLayout>

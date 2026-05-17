@@ -15,5 +15,11 @@ data class RouteStop(
     /** Seconds from the previous stop (or from the start point for the first stop). */
     val legDurationSec: Int,
     /** Meters from the previous stop. */
-    val legDistanceMeters: Int
+    val legDistanceMeters: Int,
+    /**
+     * Human-readable address for this stop (reverse-geocoded label saved on the rider's profile
+     * at route-generation time). Null on older route docs created before this field existed —
+     * the UI hides the subtitle in that case.
+     */
+    val addressLabel: String? = null
 )

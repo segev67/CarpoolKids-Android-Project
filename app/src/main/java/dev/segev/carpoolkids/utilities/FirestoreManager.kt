@@ -1462,7 +1462,8 @@ class FirestoreManager private constructor(context: Context) {
         "lng" to stop.lng,
         "etaMillis" to stop.etaMillis,
         "legDurationSec" to stop.legDurationSec,
-        "legDistanceMeters" to stop.legDistanceMeters
+        "legDistanceMeters" to stop.legDistanceMeters,
+        "addressLabel" to stop.addressLabel
     )
 
     private fun documentToCarpoolRoute(doc: com.google.firebase.firestore.DocumentSnapshot): CarpoolRoute? {
@@ -1532,6 +1533,7 @@ class FirestoreManager private constructor(context: Context) {
         val etaMillis = (map["etaMillis"] as? Number)?.toLong() ?: 0L
         val legDurationSec = (map["legDurationSec"] as? Number)?.toInt() ?: 0
         val legDistanceMeters = (map["legDistanceMeters"] as? Number)?.toInt() ?: 0
+        val addressLabel = (map["addressLabel"] as? String)?.takeIf { it.isNotBlank() }
         return RouteStop(
             sequence = sequence,
             passengerUid = passengerUid,
@@ -1540,7 +1542,8 @@ class FirestoreManager private constructor(context: Context) {
             lng = lng,
             etaMillis = etaMillis,
             legDurationSec = legDurationSec,
-            legDistanceMeters = legDistanceMeters
+            legDistanceMeters = legDistanceMeters,
+            addressLabel = addressLabel
         )
     }
 

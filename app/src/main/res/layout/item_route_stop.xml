@@ -74,6 +74,19 @@
             tools:text="Pick up · 16:42" />
 
         <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/item_route_stop_address"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textColor="@color/dashboard_text_secondary"
+            android:textDirection="ltr"
+            android:textSize="@dimen/text_caption_size"
+            android:visibility="gone"
+            tools:text="12 Rothschild Blvd, Tel Aviv"
+            tools:visibility="visible" />
+
+        <com.google.android.material.textview.MaterialTextView
             android:id="@+id/item_route_stop_distance"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

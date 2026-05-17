@@ -76,6 +76,10 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
     private var missingNamesByUid: Map<String, String> = emptyMap()
     private var missingNamesFetchKey: Set<String> = emptySet()
 
+    /** Cached driver home address (for the route origin / destination row); refetched when driverUid changes. */
+    private var driverHomeAddress: String? = null
+    private var driverHomeAddressFetchKey: String? = null
+
     private lateinit var adapter: RouteStopsAdapter
     private val drawnPolylines = mutableListOf<Polyline>()
     /** Phase 8 — keyed by passengerUid so a stop-row tap can focus its marker on the map. */
@@ -206,7 +210,29 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
                 }
             }
         }
+        maybeRefreshDriverHomeAddress(incoming)
         render()
+    }
+
+    /**
+     * Fetch the driver's saved home address label for the origin/destination row. Same key-guarded
+     * pattern as [missingNamesByUid] — only refetch when [CarpoolRoute.driverUid] actually changes.
+     */
+    private fun maybeRefreshDriverHomeAddress(incoming: CarpoolRoute?) {
+        val newKey = incoming?.driverUid?.takeIf { it.isNotBlank() }
+        if (newKey == driverHomeAddressFetchKey) return
+        driverHomeAddressFetchKey = newKey
+        if (newKey == null) {
+            driverHomeAddress = null
+            return
+        }
+        UserRepository.getUser(newKey) { profile, _ ->
+            if (_binding == null) return@getUser
+            if (driverHomeAddressFetchKey == newKey) {
+                driverHomeAddress = profile?.homeAddressLabel?.takeIf { it.isNotBlank() }
+                render()
+            }
+        }
     }
 
     private fun render() {
@@ -240,7 +266,7 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
                 message = getString(R.string.route_state_practice_canceled),
                 actionVisible = false
             )
-            adapter.submitList(emptyList())
+            adapter.submit(emptyList(), originAddress = null, destinationAddress = null)
             clearMap()
             return
         }
@@ -254,7 +280,7 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
                 getString(R.string.route_state_no_driver)
             }
             showEmptyState(message = message, actionVisible = false)
-            adapter.submitList(emptyList())
+            adapter.submit(emptyList(), originAddress = null, destinationAddress = null)
             clearMap()
             return
         }
@@ -269,7 +295,7 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
                 actionVisible = isAssignedDriver && !isGenerating,
                 actionLabel = R.string.route_generate_now
             )
-            adapter.submitList(emptyList())
+            adapter.submit(emptyList(), originAddress = null, destinationAddress = null)
             clearMap()
             return
         }
@@ -281,7 +307,7 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
                     actionVisible = isAssignedDriver && !isGenerating,
                     actionLabel = R.string.route_generate_now
                 )
-                adapter.submitList(emptyList())
+                adapter.submit(emptyList(), originAddress = null, destinationAddress = null)
                 clearMap()
             }
             Constants.RouteStatus.FAILED -> {
@@ -293,7 +319,7 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
                     actionVisible = isAssignedDriver && !isGenerating,
                     actionLabel = R.string.route_retry
                 )
-                adapter.submitList(emptyList())
+                adapter.submit(emptyList(), originAddress = null, destinationAddress = null)
                 clearMap()
             }
             else -> renderReadyRoute(route, practice, isAssignedDriver)
@@ -303,7 +329,20 @@ class CarpoolRouteFragment : Fragment(), OnMapReadyCallback {
     private fun renderReadyRoute(route: CarpoolRoute, practice: Practice?, isAssignedDriver: Boolean) {
         val binding = _binding ?: return
         adapter.setCurrentUserUid(FirebaseAuth.getInstance().currentUser?.uid.orEmpty())
-        adapter.submitList(route.stops)
+        // Endpoint rows:
+        //   PICKUP  — origin = driver's home, destination = practice location.
+        //   DROPOFF — origin = practice location; the route ends at the last rider (no end row).
+        val practiceLocation = practice?.location?.takeIf { it.isNotBlank() }
+        val originAddress: String?
+        val destinationAddress: String?
+        if (route.direction == Constants.RouteDirection.PICKUP) {
+            originAddress = driverHomeAddress
+            destinationAddress = practiceLocation
+        } else {
+            originAddress = practiceLocation
+            destinationAddress = null
+        }
+        adapter.submit(route.stops, originAddress = originAddress, destinationAddress = destinationAddress)
 
         // Summary card
         binding.routeSummaryCard.visibility = View.VISIBLE

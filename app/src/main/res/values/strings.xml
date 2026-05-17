@@ -287,6 +287,9 @@
     <string name="route_distance_km">%1$.1f km</string>
     <string name="route_duration_min">%1$d min</string>
     <string name="route_stops_header">Stops</string>
+    <string name="route_endpoint_start">Start</string>
+    <string name="route_endpoint_end">End</string>
+    <string name="route_endpoint_no_address">Address not set</string>
     <string name="route_you_badge">You</string>
     <string name="route_not_generated_driver">No route yet. Generate one to share with the group.</string>
     <string name="route_not_generated_member">The driver hasn\'t generated the route yet.</string>

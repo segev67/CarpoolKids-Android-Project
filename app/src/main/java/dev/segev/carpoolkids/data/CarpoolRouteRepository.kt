@@ -109,7 +109,8 @@ object CarpoolRouteRepository {
     private data class RoutedPassenger(
         val uid: String,
         val name: String,
-        val coords: LatLng
+        val coords: LatLng,
+        val addressLabel: String?
     )
 
     private fun partitionByAddress(
@@ -130,7 +131,8 @@ object CarpoolRouteRepository {
                     name = profile.displayName?.takeIf { it.isNotBlank() }
                         ?: profile.email?.takeIf { it.isNotBlank() }
                         ?: uid,
-                    coords = LatLng(lat, lng)
+                    coords = LatLng(lat, lng),
+                    addressLabel = profile.homeAddressLabel?.takeIf { it.isNotBlank() }
                 )
             } else {
                 missing += uid
@@ -235,7 +237,8 @@ object CarpoolRouteRepository {
                 lng = passenger.coords.longitude,
                 etaMillis = perLegEtas.getOrNull(idx) ?: departureMs,
                 legDurationSec = osrmLegDurations.getOrNull(idx) ?: 0,
-                legDistanceMeters = osrmLegDistances.getOrNull(idx) ?: 0
+                legDistanceMeters = osrmLegDistances.getOrNull(idx) ?: 0,
+                addressLabel = passenger.addressLabel
             )
         }
         return CarpoolRoute(
